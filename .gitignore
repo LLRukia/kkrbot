@@ -1,0 +1,7 @@
+.env
+.vscode/*
+*.log
+*.pyc
+*.code-workspace
+data/
+cache/
