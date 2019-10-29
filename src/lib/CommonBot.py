@@ -9,6 +9,7 @@ from handlers.LoseliaGroupHandler import LoseliaGroupHandler
 from handlers.EasyGroupHandler import EasyGroupHandler
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 import ImageProcesser
+from BestdoriAssets import card
 
 class CommonBot(Bot):
     def TO_SUBSCRIBE(self):
@@ -67,82 +68,14 @@ class CommonBot(Bot):
         return {}
 
     async def on_private_message(self, context):
-        import Cards
-        import sqlite3
-        self.card_db = Cards.CardDB(sqlite3.connect(os.path.join(const.workpath, 'data', 'cards.db')))
-
         msg = context['raw_message'].strip()
-        gid = context['user_id']
-        if gid:# == 365181628:
-            res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg)
-            if res:
-                result = self.card_db.select_by_single_value('resourceSetName', id=int(res.group(1)))
-                if result:
-                    resource_set_name = result[0][0]
-                    if res.group(3) == '特训前':
-                        if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_normal.png'), os.R_OK):
-                            file_path = f'assets/{resource_set_name}_card_normal.png'
-                    elif res.group(3) == '特训后':
-                        if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_after_training.png'), os.R_OK):
-                            file_path = f'assets/{resource_set_name}_card_after_training.png'
-                    else:
-                        file_path = f'assets/{resource_set_name}_card_normal.png' \
-                        if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_normal.png'), os.R_OK) \
-                        else f'assets/{resource_set_name}_card_after_training.png' \
-                        if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_after_training.png'), os.R_OK) \
-                        else ''
-                    if file_path:
-                        await self.send_private_msg(gid, ImageMsg({'file': file_path}))
-                else:
-                    await self.send_private_msg(gid, StringMsg('无相关卡牌'))
-                return True
-            
-            res = re.search(r'^查卡(\d+)(\s+(特训前|特训后))?$', msg)
-            if res:
-                description, resource_set_name, rarity, attribute, band_id = self.card_db.detail(cid=int(res.group(1)))
-                if resource_set_name:
-                    if res.group(3) == '特训前':
-                        file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=False)
-                    elif res.group(3) == '特训后':
-                        file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
-                    else:
-                        file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=False) \
-                                or ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
-                    if file_path:
-                        await self.send_private_msg(gid, MultiMsg([ImageMsg({'file': file_path}), StringMsg(description)]))
-                else:
-                    await self.send_private_msg(gid, StringMsg('无相关卡牌'))
-                return True
-            
-            constraints = Cards.parse(msg.strip())
-            if constraints:
-                if constraints == '露佬':
-                    await self.send_private_msg(gid, MultiMsg([StringMsg('再查露佬头都给你锤爆'), ImageMsg({'file':'kkr/lulao'})]))
-                    return True
-                results = self.card_db.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', **constraints)
-                if results:
-                    images = [
-                        ImageProcesser.merge_image(r[1], r[2], r[3], r[4]) or
-                        ImageProcesser.white_padding(180, 180)
-                        for r in results
-                    ]
-                    images_trained = [
-                        ImageProcesser.merge_image(r[1], r[2], r[3], r[4], trained=True) or
-                        ImageProcesser.white_padding(180, 180)
-                        for r in results
-                    ]
-                    texts = [str(r[0]) + f'({Cards.skill_type.get(r[5], "未知")}, {Cards.types.get(r[6], "未知")})' for r in results]
-                    # fragment
-                    MAX_NUM = 32
-                    file_names = [ImageProcesser.thumbnail2(
-                        images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images_trained))], 
-                        images_trained[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images_trained))], 
-                        texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images_trained))]) for i in range((len(images_trained) - 1) // MAX_NUM + 1)]
-                    [await self.send_private_msg(gid, ImageMsg({'file': f})) for f in file_names]
-                else:
-                    await self.send_private_msg(gid, StringMsg('无相关卡牌'))
-                return True
-            return False
+        uid = context['user_id']
+        if uid in [365181628]:
+            if await card.query_card(self.send_private_msg, msg, uid):
+                self.logger.info('query card successful')
+                return
+            else:
+                self.logger.info('not a query card command')
 
         self.logger.info('on_private_message %s', context)
         if context['user_id'] not in [444351271, 365181628]: return {}

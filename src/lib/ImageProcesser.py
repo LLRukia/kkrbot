@@ -62,54 +62,6 @@ def init():
 
 init()
 
-def thumbnail(images: list, texts: list):
-    N_COLS = 4
-    N_ROWS = (len(images) - 1) // N_COLS + 1
-    
-    FONT_SIZE = 20
-    WIDTH = 180
-    HEIGHT = 180
-    font = ImageFont.truetype(os.path.join(const.workpath, FONT), FONT_SIZE)
-    im = Image.new('RGB', (WIDTH * N_COLS, (HEIGHT + FONT_SIZE) * N_ROWS), (255,255,255))
-    draw = ImageDraw.Draw(im)
-
-    for r in range(N_ROWS):
-        for c in range(N_COLS):
-            if r * N_COLS + c >= len(images):
-                break
-            im.paste(images[r * N_COLS + c], (c * WIDTH, r * (HEIGHT + FONT_SIZE)))
-            sz = draw.textsize(texts[r * N_COLS + c], font=font)
-            draw.text((c * WIDTH + WIDTH // 2 - sz[0] // 2, r * (HEIGHT + sz[1]) + HEIGHT), str(texts[r * N_COLS + c]), fill=(0,0,0), font=font)
-    
-    fn = f'{str(uuid.uuid1())}.jpg'
-    im.save(os.path.join(const.datapath, 'image', fn))
-    return fn
-
-def thumbnail2(images: list, images_trained: list, texts: list):
-    N_COLS = 4
-    N_ROWS = (len(images) - 1) // N_COLS + 1
-    
-    FONT_SIZE = 20
-    WIDTH = 180
-    HEIGHT = 180
-    font = ImageFont.truetype(os.path.join(const.workpath, FONT), FONT_SIZE)
-    text_height = ImageDraw.Draw(Image.new('RGB', (1, 1))).textsize('0123456789&|分判奶盾()', font=font)[1]
-    im = Image.new('RGB', (2 * WIDTH * N_COLS, (HEIGHT + text_height) * N_ROWS), (255,255,255))
-    draw = ImageDraw.Draw(im)
-
-    for r in range(N_ROWS):
-        for c in range(N_COLS):
-            if r * N_COLS + c >= len(images):
-                break
-            im.paste(images[r * N_COLS + c], (2 * c * WIDTH, r * (HEIGHT + text_height)))
-            im.paste(images_trained[r * N_COLS + c], (2 * c * WIDTH + WIDTH, r * (HEIGHT + text_height)))
-            sz = draw.textsize(texts[r * N_COLS + c], font=font)
-            draw.text((2 * c * WIDTH + WIDTH - sz[0] // 2, r * (HEIGHT + text_height) + HEIGHT), str(texts[r * N_COLS + c]), fill=(0,0,0), font=font)
-    
-    fn = f'{str(uuid.uuid1())}.jpg'
-    im.save(os.path.join(const.datapath, 'image', fn))
-    return fn
-
 def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False):
     if thumbnail:
         try:
@@ -172,6 +124,99 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False):
         except:
             return ''
         
-
 def white_padding(width, height):
     return Image.new('RGB', (width, height), (255, 255, 255))
+
+def thumbnail(**options):
+    # images: a list of Image objects, or a list of lists(tuples) of Image objects
+    # labels: a list of strings shown at the bottom
+    # image_style: if not assigned, take the params of the first image; if both assigned, will be forced to resize
+    ##### width: width of each image, if not assigned, will be min(scaled value by height, 180)
+    ##### height: height of each image, if not assigned, will be min(scaled value by width, 180)
+    # label_style:
+    ##### font_size: font_size of each label
+    # col_num (images are arranged row by row)
+    # col_space: (space between two columns)
+    # row_space (space between two rows, if labels exist, it means the space between the label of row1 and the image of row2)
+    images = options['images']
+    first_image = images[0]
+    if not isinstance(first_image, Image.Image):
+        if isinstance(first_image, (list, tuple)):
+            first_image = first_image[0]
+            if not isinstance(first_image, Image.Image):
+                raise Exception('images must be a list of Image objects, or a list of lists(tuples) of Image objects')
+        else:
+            raise Exception('images must be a list of Image objects, or a list of lists(tuples) of Image objects')
+    else:
+        images = [[im] for im in images]
+    
+    if not options.get('image_style'):
+        box_width, box_height = first_image.size
+    else:
+        if options['image_style']['width'] and options['image_style']['height']:
+            box_width, box_height = options['image_style']['width'], options['image_style']['height']
+            images = [[im.resize((image_width, image_height)) for im in im_list] for im_list in images]
+        elif options['image_style']['width'] and not options['image_style']['height']:
+            images = [[im.resize((options['image_style']['width'], 180 * im.size[1] / im.size[0])) for im in im_list] for im_list in images]
+            box_width, box_height = 180, max([[im.size[1] for im in im_list] for im_list in images])
+        elif not options['image_style']['width'] and options['image_style']['height']:
+            images = [[im.resize((180 * im.size[0] / im.size[1], options['image_style']['height'])) for im in im_list] for im_list in images]
+            box_width, box_height = max([[im.size[0] for im in im_list] for im_list in images]), 180
+    
+    col_num = options.get('col_num', 4)
+    row_num = (len(images) - 1) // col_num + 1
+    col_space = options.get('col_space', 0)
+    row_space = options.get('row_space', 0)
+
+    if options.get('labels'):
+        font = ImageFont.truetype(os.path.join(const.workpath, FONT), options.get('label_style', {}).get('font_size', 20))
+        all_chars = set()
+        max_label_width = 0
+        for label in options['labels']:
+            max_label_width = max(max_label_width, ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize(label, font=font)[0])
+            all_chars |= set(label)
+        label_height = ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize(''.join(all_chars), font=font)[1]
+        box_width = max(box_width * len(images[0]), max_label_width) // len(images[0])
+    
+        back_image = Image.new('RGB', (
+            col_num * len(images[0]) * box_width + (col_num - 1) * col_space, 
+            (box_height + label_height) * row_num + (row_num - 1) * row_space
+        ), (255, 255, 255))
+
+        draw = ImageDraw.Draw(back_image)
+        labels = options['labels']
+        for r in range(row_num):
+            for c in range(col_num):
+                if r * col_num + c >= len(images):
+                    break
+                image_group = images[r * col_num + c]
+                for i, im in enumerate(image_group):
+                    back_image.paste(im, (
+                        (len(image_group) * c + i) * box_width + (box_width - im.size[0]) // 2 + c * col_space * int(i == len(image_group) - 1),
+                        r * (box_height + label_height + row_space)
+                    ))
+                sz = draw.textsize(labels[r * col_num + c], font=font)
+                draw.text((
+                    len(image_group) * c * box_width + (len(image_group) * box_width - sz[0]) // 2 + c * col_space, r * (box_height + label_height + row_space) + box_height
+                ), labels[r * col_num + c], fill=(0, 0, 0), font=font)
+    else:
+        back_image = Image.new('RGB', (
+            col_num * len(images[0]) * box_width + (col_num - 1) * col_space, 
+            box_height * row_num + (row_num - 1) * row_space
+        ), (255, 255, 255))
+
+        draw = ImageDraw.Draw(back_image)
+        for r in range(row_num):
+            for c in range(col_num):
+                if r * col_num + c >= len(images):
+                    break
+                image_group = images[r * col_num + c]
+                for i, im in enumerate(image_group):
+                    back_image.paste(im, (
+                        (len(image_group) * c + i) * box_width + (box_width - im.size[0]) // 2 + c * col_space * int(i == len(image_group) - 1),
+                        r * (box_height + row_space)
+                    ))
+
+    fn = f'{str(uuid.uuid1())}.jpg'
+    back_image.save(os.path.join(const.datapath, 'image', fn))
+    return fn
