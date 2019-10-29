@@ -192,7 +192,7 @@ def thumbnail(**options):
                 image_group = images[r * col_num + c]
                 for i, im in enumerate(image_group):
                     back_image.paste(im, (
-                        (len(image_group) * c + i) * box_width + (box_width - im.size[0]) // 2 + c * col_space * int(i == len(image_group) - 1),
+                        (len(image_group) * c + i) * box_width + (box_width - im.size[0]) // 2 + col_space * c,
                         r * (box_height + label_height + row_space)
                     ))
                 sz = draw.textsize(labels[r * col_num + c], font=font)

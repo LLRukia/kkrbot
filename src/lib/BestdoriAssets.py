@@ -243,7 +243,7 @@ class Card:
                     ImageProcesser.merge_image(r[1], r[2], r[3], r[4], trained=True) or
                     ImageProcesser.white_padding(180, 180)
                 ] for r in results]
-                images = [ImageProcesser.merge_image(r[1], r[2], r[3], r[4]) or ImageProcesser.white_padding(180, 180) for r in results]
+                # images = [ImageProcesser.merge_image(r[1], r[2], r[3], r[4]) or ImageProcesser.white_padding(180, 180) for r in results]
                 texts = [str(r[0]) + f'({self._skill_types.get(r[5], "未知")}, {self._types.get(r[6], "未知")})' for r in results]
                 # fragment
                 MAX_NUM = 32
