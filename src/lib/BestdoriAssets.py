@@ -3,10 +3,14 @@ import re
 import sqlite3
 import json
 import collections
+import datetime
+from PIL import Image
 
 import const
 import ImageProcesser
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
+
+from crawler import CardTable
 
 class CardDB:
     def __init__(self, conn):
@@ -29,12 +33,6 @@ class CardDB:
             ''', [v for k, vs in constraint.items() for v in vs]).fetchall()
         else:
             return self.conn.execute(f'select {col_exp} from card').fetchall()
-    
-    def insert(self, *data):
-        self.conn.execute('''
-            insert into card (id, name, characterId, rarity, attribute, resourceSetName, sdResourceName) values (?,?,?,?,?,?,?)
-        ''', data)
-        self.conn.commit()
 
     def close(self):
         self.conn.close()
@@ -44,8 +42,8 @@ class CardDB:
 
 class Card:
     def __init__(self):
-        self.card_db = CardDB(sqlite3.connect(os.path.join(const.workpath, 'data', 'cards.db')))
-        
+        # self.card_db = CardDB(sqlite3.connect(os.path.join(const.workpath, 'data', 'bestdori.db')))
+        self.card_db = CardTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
         self._mapping = {
             'characterId': {
                 '户山香澄': 1,'香澄': 1, 'kasumi': 1, 'ksm': 1,
@@ -190,22 +188,22 @@ class Card:
             return f'\n标题: {name}\n种类: {self._types[type_]}\n三围: {overall}\n技能: {skill_description}', resource_set_name, rarity, attribute, band_id
     
     async def query_card(self, send_handler, msg, receiver_id):   # send_handler: Bot send handler
-        res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg)
+        res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg.strip())
         if res:
             result = self.card_db.select_by_single_value('resourceSetName', id=int(res.group(1)))
             if result:
                 resource_set_name = result[0][0]
                 if res.group(3) == '特训前':
-                    if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_normal.png'), os.R_OK):
-                        file_path = f'assets/{resource_set_name}_card_normal.png'
+                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_normal.png'), os.R_OK):
+                        file_path = f'assets/cards/{resource_set_name}_card_normal.png'
                 elif res.group(3) == '特训后':
-                    if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_after_training.png'), os.R_OK):
-                        file_path = f'assets/{resource_set_name}_card_after_training.png'
+                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK):
+                        file_path = f'assets/cards/{resource_set_name}_card_after_training.png'
                 else:
-                    file_path = f'assets/{resource_set_name}_card_normal.png' \
-                    if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_normal.png'), os.R_OK) \
-                    else f'assets/{resource_set_name}_card_after_training.png' \
-                    if os.access(os.path.join(const.datapath, 'image', 'assets', f'{resource_set_name}_card_after_training.png'), os.R_OK) \
+                    file_path = f'assets/cards/{resource_set_name}_card_normal.png' \
+                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_normal.png'), os.R_OK) \
+                    else f'assets/cards/{resource_set_name}_card_after_training.png' \
+                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK) \
                     else ''
                 if file_path:
                     await send_handler(receiver_id, ImageMsg({'file': file_path}))
@@ -213,7 +211,7 @@ class Card:
                 await send_handler(receiver_id, StringMsg('无相关卡牌'))
             return True
         
-        res = re.search(r'^查卡(\d+)(\s+(特训前|特训后))?$', msg)
+        res = re.search(r'^查卡(\d+)(\s+(特训前|特训后))?$', msg.strip())
         if res:
             description, resource_set_name, rarity, attribute, band_id = self._detail(cid=int(res.group(1)))
             if resource_set_name:
@@ -260,4 +258,179 @@ class Card:
             return True
         return False
 
+from crawler import EventTable
+
+class Event:
+    def __init__(self, card_table):
+        self.event_table = EventTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
+        self.card_table = card_table
+        self._mapping = {
+            'attribute': {
+                'powerful': 'powerful', '红': 'powerful',
+                'cool': 'cool', '蓝': 'cool',
+                'happy': 'happy', '橙': 'happy',
+                'pure': 'pure', '绿': 'pure',
+            },
+        }
+        self._type = {
+            'story': '一般活动',
+            'versus': '竞演LIVE',
+            'challenge': '挑战LIVE',
+            'live_try': 'LIVE试炼',
+            'mission_live': '任务LIVE',
+        }
+        self._server = {
+            '日服': 0,
+            '国际服': 1,
+            '台服': 2,
+            '国服': 3,
+        }
+        self._server_name = {
+            0: 'jp',
+            1: 'en',
+            2: 'tw',
+            3: 'cn',
+        }
+
+    def _parse_query_command(self, string):
+        string = string.split()
+        if string[0] == '活动列表':
+            constraint = collections.OrderedDict()
+            for c in string[1:]:
+                valid_parameter = False
+                for attribute, attribute2id in self._mapping.items():
+                    if c.lower() in attribute2id:
+                        if constraint.get(attribute) is None:
+                            constraint[attribute] = []
+                        if type(attribute2id[c.lower()]) is list:
+                            constraint[attribute] += attribute2id[c.lower()]
+                        else:
+                            constraint[attribute].append(attribute2id[c.lower()])
+                        valid_parameter = True
+                        break
+                if not valid_parameter:
+                    return {}
+            return constraint
+    
+    def _detail(self, eid, server):
+        banner_asset_bundle_name, = self.event_table.select_by_single_value('bannerAssetBundleName', id=eid)[0]
+        if banner_asset_bundle_name:
+            detail = []
+            with open(os.path.join(const.workpath, 'data', 'json', 'events', f'{eid}.json'), 'r', encoding='utf-8') as f:
+                event_data = json.load(f)
+            if event_data["startAt"][server]:
+                file_path = f'assets/events/{self._server_name[server]}/{banner_asset_bundle_name}.png'
+                if os.access(os.path.join(const.asset_event_path, self._server_name[server], f'{banner_asset_bundle_name}.png'), os.R_OK):
+                    detail.append(ImageMsg({'file': file_path}))
+                detail.append(StringMsg('\n' + '\n'.join([f'{key}: {value}' for key, value in {
+                    '标题': event_data['eventName'][server],
+                    '种类': self._type[event_data['eventType']],
+                    '开始时间': f'{(datetime.datetime.utcfromtimestamp(int(event_data["startAt"][server]) // 1000) + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")}(北京时间)',
+                    '结束时间': f'{(datetime.datetime.utcfromtimestamp(int(event_data["endAt"][server]) // 1000) + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")}(北京时间)',
+                }.items()])))
+
+                detail.append(StringMsg('\n属性: '))
+                [(detail.append(ImageMsg({'file': f'assets/res/{a["attribute"]}.png'})), detail.append(StringMsg(f'+{a["percent"]}%'))) for a in event_data['attributes']]
+                
+                detail.append(StringMsg('\n角色: '))
+                c0 = event_data['characters'][0]
+                for c in event_data['characters'][1:]:
+                    if c['percent'] != c0['percent']:
+                        [(detail.append(ImageMsg({'file': f'assets/res/chara_icon_{c["characterId"]}.png'})), detail.append(StringMsg(f'+{c["percent"]}%'))) for c in event_data['characters']]
+                        c0 = None
+                        break
+                else:
+                    [detail.append(ImageMsg({'file': f'assets/res/chara_icon_{c["characterId"]}.png'})) for c in event_data['characters']]
+                    detail.append(StringMsg(f'+{c0["percent"]}%'))
+                
+                detail.append(StringMsg('\n奖励: '))
+                cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
+                filenames = [ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False, return_fn=True) for c in cards]
+                [detail.append(ImageMsg({'file': f})) for f in filenames]
+                [detail.append(StringMsg(f'(卡牌id: {",".join([str(i) for i in event_data["rewardCards"]])})'))]
+            else:
+                detail.append(StringMsg('活动尚未开始'))
+            return detail
+    
+    def _detail_ver2(self, eid, server):
+        res = self.event_table.select_by_single_value('bannerAssetBundleName', id=eid)
+        if res:
+            banner_asset_bundle_name, = res[0]
+            if banner_asset_bundle_name:
+                detail = []
+                with open(os.path.join(const.workpath, 'data', 'json', 'events', f'{eid}.json'), 'r', encoding='utf-8') as f:
+                    event_data = json.load(f)
+                if event_data["startAt"][server]:
+                    file_path = f'assets/events/{self._server_name[server]}/{banner_asset_bundle_name}.png'
+                    if os.access(os.path.join(const.asset_event_path, self._server_name[server], f'{banner_asset_bundle_name}.png'), os.R_OK):
+                        detail.append(ImageMsg({'file': file_path}))
+                    detail.append(StringMsg('\n' + '\n'.join([f'{key}: {value}' for key, value in {
+                        '标题': event_data['eventName'][server],
+                        '种类': self._type[event_data['eventType']],
+                        '开始时间': f'{(datetime.datetime.utcfromtimestamp(int(event_data["startAt"][server]) // 1000) + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")}(北京时间)',
+                        '结束时间': f'{(datetime.datetime.utcfromtimestamp(int(event_data["endAt"][server]) // 1000) + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")}(北京时间)',
+                    }.items()])))
+
+                    detail.append(StringMsg('\n属性: '))
+                    [(detail.append(ImageMsg({'file': f'assets/res/{a["attribute"]}.png'})), detail.append(StringMsg(f'+{a["percent"]}%'))) for a in event_data['attributes']]
+                    
+                    detail.append(StringMsg('\n角色: '))
+                    
+                    images = [[
+                        ImageProcesser.open_nontransparent(os.path.join(const.asset_resource_path, f'chara_icon_{c["characterId"]}.png'))
+                    ] for c in event_data['characters']]
+                    texts = [f'+{c["percent"]}%' for c in event_data['characters']]
+                    character_filename = ImageProcesser.thumbnail(
+                        images=images,
+                        labels=texts,
+                        col_num=len(images),
+                        row_space=5,
+                    )
+                    detail.append(ImageMsg({'file': character_filename}))
+        
+                    
+                    detail.append(StringMsg('\n奖励: '))
+                    cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
+                    rewards_filename = ImageProcesser.thumbnail(
+                        images=[ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False) for c in cards],
+                        labels=[str(i) for i in event_data["rewardCards"]],
+                        col_num=len(cards),
+                        row_space=5,
+                    )
+                    detail.append(ImageMsg({'file': rewards_filename}))
+                else:
+                    detail.append(StringMsg('活动尚未开始'))
+            return detail
+    
+    async def query(self, send_handler, msg, receiver_id):
+        res = re.search(r'^活动(\d+)(\s+(日服|国际服|台服|国服))?$', msg.strip())
+        if res:
+            detail = self._detail_ver2(int(res.group(1)), self._server[res.group(3) or '国服'])
+            if detail is not None:
+                await send_handler(receiver_id, MultiMsg(detail))
+            else:
+                await send_handler(receiver_id, StringMsg('无相关活动'))
+            return True
+        
+        constraints = self._parse_query_command(msg.strip())
+        if constraints is not None:
+            results = self.event_table.select('id', 'eventType', 'eventName', 'bannerAssetBundleName', **constraints)
+            if results:
+                images = [[
+                    ImageProcesser.open_nontransparent(os.path.join(const.asset_event_path, 'jp', f'{r[3]}.png')) or
+                    ImageProcesser.white_padding(420, 140),
+                ] for r in results]
+                texts = [f'{r[0]}: {r[2]}' for r in results]
+                MAX_NUM = 32
+                file_names = [ImageProcesser.thumbnail(images=images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                    labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                    label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
+                    col_space=20,
+                    row_space=20
+                ) for i in range((len(images) - 1) // MAX_NUM + 1)]
+                [await send_handler(receiver_id, ImageMsg({'file': f})) for f in file_names]
+            return True
+        return False
+
 card = Card()
+event = Event(card.card_db)

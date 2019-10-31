@@ -62,27 +62,35 @@ def init():
 
 init()
 
-def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False):
+def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, return_fn=False):
     if thumbnail:
         try:
-            attribute_icon = Image.open(os.path.join(const.resourcepath, f'{attribute}.png'))
-            band_icon = Image.open(os.path.join(const.resourcepath, f'band_{band_id}.png'))
+            if return_fn:
+                fn = f'auto_reply/cards/thumb/m_{rsn}_{"normal" if not trained else "after_training"}.png'
+                if os.access(os.path.join(const.datapath, 'image', fn), os.R_OK):
+                    return fn
+            attribute_icon = Image.open(os.path.join(const.asset_resource_path, f'{attribute}.png'))
+            band_icon = Image.open(os.path.join(const.asset_resource_path, f'band_{band_id}.png'))
             if not trained:
-                back_image = Image.open(f'{os.path.join(const.thumbnailpath, f"{rsn}_normal.png")}')
-                star = Image.open(os.path.join(const.resourcepath, 'star.png')).resize((32, 32), Image.ANTIALIAS)
+                back_image = Image.open(f'{os.path.join(const.asset_card_thumb_path, f"{rsn}_normal.png")}')
+                star = Image.open(os.path.join(const.asset_resource_path, 'star.png')).resize((32, 32), Image.ANTIALIAS)
             else:
-                back_image = Image.open(f'{os.path.join(const.thumbnailpath, f"{rsn}_after_training.png")}')
-                star = Image.open(os.path.join(const.resourcepath, 'star_trained.png')).resize((32, 32), Image.ANTIALIAS)
+                back_image = Image.open(f'{os.path.join(const.asset_card_thumb_path, f"{rsn}_after_training.png")}')
+                star = Image.open(os.path.join(const.asset_resource_path, 'star_trained.png')).resize((32, 32), Image.ANTIALIAS)
             if rarity == 1:
-                frame = Image.open(os.path.join(const.resourcepath, f'card-1-{attribute}.png'))
+                frame = Image.open(os.path.join(const.asset_resource_path, f'card-1-{attribute}.png'))
             else:
-                frame = Image.open(os.path.join(const.resourcepath, f'card-{rarity}.png'))
+                frame = Image.open(os.path.join(const.asset_resource_path, f'card-{rarity}.png'))
             
             back_image.paste(frame, (0, 0), mask=frame)
             back_image.paste(band_icon, (0, 0), mask=band_icon)
             back_image.paste(attribute_icon, (180 - 50, 0), mask=attribute_icon)
             for i in range(rarity):
                 back_image.paste(star, (2, 170 - 27 * (i + 1)), mask=star)
+            if return_fn:
+                fn = f'auto_reply/cards/thumb/m_{rsn}_{"normal" if not trained else "after_training"}.png'
+                back_image.save(os.path.join(const.datapath, 'image', fn))
+                return fn
             return back_image
         except:
             return None
@@ -100,18 +108,18 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False):
             STAT_STEP = 95
 
             back_image = Image.new('RGB', (OUT_WIDTH, OUT_HEIGHT))
-            attribute_icon = Image.open(os.path.join(const.resourcepath, f'{attribute}.png')).resize((ICON_SIZE, ICON_SIZE), Image.ANTIALIAS)
-            band_icon = Image.open(os.path.join(const.resourcepath, f'band_{band_id}.png')).resize((ICON_SIZE, ICON_SIZE), Image.ANTIALIAS)
+            attribute_icon = Image.open(os.path.join(const.asset_resource_path, f'{attribute}.png')).resize((ICON_SIZE, ICON_SIZE), Image.ANTIALIAS)
+            band_icon = Image.open(os.path.join(const.asset_resource_path, f'band_{band_id}.png')).resize((ICON_SIZE, ICON_SIZE), Image.ANTIALIAS)
             if not trained:
-                card = Image.open(f'{os.path.join(const.assetpath, f"{rsn}_card_normal.png")}')
-                star = Image.open(os.path.join(const.resourcepath, 'star.png')).resize((STAR_SIZE, STAR_SIZE), Image.ANTIALIAS)
+                card = Image.open(f'{os.path.join(const.asset_card_path, f"{rsn}_card_normal.png")}')
+                star = Image.open(os.path.join(const.asset_resource_path, 'star.png')).resize((STAR_SIZE, STAR_SIZE), Image.ANTIALIAS)
             else:
-                card = Image.open(f'{os.path.join(const.assetpath, f"{rsn}_card_after_training.png")}')
-                star = Image.open(os.path.join(const.resourcepath, 'star_trained.png')).resize((STAR_SIZE, STAR_SIZE), Image.ANTIALIAS)
+                card = Image.open(f'{os.path.join(const.asset_card_path, f"{rsn}_card_after_training.png")}')
+                star = Image.open(os.path.join(const.asset_resource_path, 'star_trained.png')).resize((STAR_SIZE, STAR_SIZE), Image.ANTIALIAS)
             if rarity == 1:
-                frame = Image.open(os.path.join(const.resourcepath, f'frame-1-{attribute}.png')).resize((OUT_WIDTH, OUT_HEIGHT), Image.ANTIALIAS)
+                frame = Image.open(os.path.join(const.asset_resource_path, f'frame-1-{attribute}.png')).resize((OUT_WIDTH, OUT_HEIGHT), Image.ANTIALIAS)
             else:
-                frame = Image.open(os.path.join(const.resourcepath, f'frame-{rarity}.png')).resize((OUT_WIDTH, OUT_HEIGHT), Image.ANTIALIAS)
+                frame = Image.open(os.path.join(const.asset_resource_path, f'frame-{rarity}.png')).resize((OUT_WIDTH, OUT_HEIGHT), Image.ANTIALIAS)
 
             back_image.paste(card, ((OUT_WIDTH - INNER_WIDTH) // 2, (OUT_HEIGHT - INNER_HEIGHT) // 2), mask=card)
             back_image.paste(frame, (0, 0), mask=frame)
@@ -169,7 +177,8 @@ def thumbnail(**options):
     row_space = options.get('row_space', 0)
 
     if options.get('labels'):
-        font = ImageFont.truetype(os.path.join(const.workpath, FONT), options.get('label_style', {}).get('font_size', 20))
+        font_type = f'cache/{options.get("label_style", {}).get("font_type", "simhei.ttf")}'
+        font = ImageFont.truetype(os.path.join(const.workpath, font_type), options.get('label_style', {}).get('font_size', 20))
         all_chars = set()
         max_label_width = 0
         for label in options['labels']:
@@ -180,7 +189,7 @@ def thumbnail(**options):
     
         back_image = Image.new('RGB', (
             col_num * len(images[0]) * box_width + (col_num - 1) * col_space, 
-            (box_height + label_height) * row_num + (row_num - 1) * row_space
+            (box_height + label_height) * row_num + row_num * row_space,
         ), (255, 255, 255))
 
         draw = ImageDraw.Draw(back_image)
@@ -220,3 +229,9 @@ def thumbnail(**options):
     fn = f'{str(uuid.uuid1())}.jpg'
     back_image.save(os.path.join(const.datapath, 'image', fn))
     return fn
+
+def open_nontransparent(filename):
+    image = Image.open(filename)
+    new_image = Image.new('RGBA', image.size, (255, 255, 255, 255))
+    new_image.paste(image, (0, 0), image)
+    return new_image

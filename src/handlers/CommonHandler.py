@@ -13,7 +13,7 @@ import States
 from const import Emojis, Images
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 from Subscribes import Any, Group, Nany, Private
-from BestdoriAssets import card
+from BestdoriAssets import card, event
 from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
 
 class GroupChatState(States.BaseState):
@@ -53,7 +53,10 @@ class GroupChatState(States.BaseState):
 
         if await self.query_card(context):
             return
-        
+
+        if await self.query_event(context):
+            return
+
         if await self.change_back_jpg(context):
             return
 
@@ -282,12 +285,16 @@ class GroupChatState(States.BaseState):
                 await self.hdlr.bot.send_group_msg(gid, MultiMsg([ImageMsg({'file':f'kkr/nb'}), StringMsg('出货的也太多了，kkr好累！下次再查吧！')]))
             return True
 
-
     async def query_card(self, context):
         msg = context['raw_message'].strip()
         gid = context['group_id']
         return await card.query_card(self.hdlr.bot.send_group_msg, msg, gid)
     
+    async def query_event(self, context):
+        msg = context['raw_message'].strip()
+        gid = context['group_id']
+        return await event.query(self.hdlr.bot.send_group_msg, msg, gid)
+
     def enter(self):
         self.hdlr.subscribe(self.group_subscribe, self.on_chat)
     

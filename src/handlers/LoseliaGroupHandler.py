@@ -30,6 +30,9 @@ class LoseliaGroupChatState(GroupChatState):
         if await self.query_card(context):
             return
         
+        if await self.query_event(context):
+            return
+        
         if await self.change_back_jpg(context):
             return
 
@@ -53,9 +56,9 @@ class LoseliaGroupChatState(GroupChatState):
         if ('白给' in msg or '差点' in msg) and random.randint(0, 1) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_give.jpg'}))
             return True
-        if ('妹子' in msg or '女人' in msg or '女的' in msg) and random.randint(0, 1) == 1:
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_girl.jpg'}))
-            return True
+        # if ('妹子' in msg or '女人' in msg or '女的' in msg) and random.randint(0, 1) == 1:
+        #    await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_girl.jpg'}))
+        #    return True
         if ('gay' in msg or '基友' in msg or '搞基' in msg) and random.randint(0, 1) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_gay.jpg'}))
             return True
