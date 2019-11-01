@@ -18,6 +18,9 @@ class Table:
             create table {self.name} ({','.join([f"{column_name} {column_type}" for column_name, column_type in self.columns.items()])})
         ''')
     
+    def drop(self):
+        self.conn.execute(f'drop table {self.name}')
+
     def select_by_single_value(self, *column, **constraint):
         col_exp = '*' if not column else ','.join(column)
         if constraint:
@@ -70,8 +73,19 @@ class EventTable(Table):
     def __init__(self, database_path, table_name='event'):
         super().__init__(database_path, table_name,
             id='int primary key not null',
+            attribute='varchar(10) not null',
             eventType='varchar(30) not null',
             eventName='varchar(100) not null',
+            bannerAssetBundleName='varchar(30) not null',
+        )
+
+class GachaTable(Table):
+    def __init__(self, database_path, table_name='gacha'):
+        super().__init__(database_path, table_name,
+            id='int primary key not null',
+            resourceName='varchar(30) not null',
+            type='varchar(30) not null',
+            gachaName='varchar(100) not null',
             bannerAssetBundleName='varchar(30) not null',
         )
 
@@ -81,6 +95,7 @@ resource_map = {
     'all_characters': 'https://bestdori.com/api/characters/all.2.json',
     'all_bands': 'https://bestdori.com/api/bands/all.1.json',
     'all_events': 'https://bestdori.com/api/events/all.5.json',
+    'all_gachas': 'https://bestdori.com/api/gacha/all.5.json',
 }
 
 class Crawler:
@@ -198,7 +213,12 @@ class CardCrawler(Crawler):
             return self.request_assets(cid)
 
     def init(self):
-        self.table.create()
+        try:
+            self.table.drop()
+        except:
+            pass
+        finally:
+            self.table.create()
         all_data = self.request_overall_json('all_cards')
 
         for cid, data in all_data.items():
@@ -276,7 +296,8 @@ class CardCrawler(Crawler):
 class EventCrawler(Crawler):
     def __init__(self, logger, table, savedir_config, json_api):
         super().__init__(logger, table, savedir_config, json_api)
-        for server in ['jp', 'en', 'tw', 'cn']:
+        self.servers = ['jp', 'en', 'tw', 'cn', 'kr'] 
+        for server in self.servers:
             if not os.path.exists(os.path.join(self.savedir_config['assets'], server)): os.makedirs(os.path.join(self.savedir_config['assets'], server))
     
     def request_assets(self, cid):
@@ -288,7 +309,7 @@ class EventCrawler(Crawler):
             banner_asset_bundle_name = json_data['bannerAssetBundleName']
             asset_bundle_name = json_data['assetBundleName']
 
-            for server in ['jp', 'en', 'tw', 'cn']:
+            for server in self.servers:
                 banner = f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png'
                 if self.request_asset(banner, f'{server}/{banner_asset_bundle_name}.png') == 0:
                     time.sleep(random.uniform(1, 2))
@@ -306,7 +327,12 @@ class EventCrawler(Crawler):
             return self.request_assets(cid)
 
     def init(self):
-        self.table.create()
+        try:
+            self.table.drop()
+        except:
+            pass
+        finally:
+            self.table.create()
         all_data = self.request_overall_json('all_events')
 
         for eid, data in all_data.items():
@@ -315,6 +341,7 @@ class EventCrawler(Crawler):
 
             self.table.insert(
                 int(eid),
+                data['attributes'][0]['attribute'],
                 data['eventType'],
                 data['eventName'][0] or data['eventName'][1] or data['eventName'][2] or data['eventName'][3],
                 data['bannerAssetBundleName'],
@@ -336,3 +363,61 @@ class EventCrawler(Crawler):
                 data['eventName'][0] or data['eventName'][1] or data['eventName'][2] or data['eventName'][3],
                 data['bannerAssetBundleName'],
             )
+
+class GachaCrawler(Crawler):
+    def __init__(self, logger, table, savedir_config, json_api):
+        super().__init__(logger, table, savedir_config, json_api)
+        self.servers = ['jp', 'en', 'tw', 'cn', 'kr']
+        for server in self.servers:
+            if not os.path.exists(os.path.join(self.savedir_config['assets'], server)): os.makedirs(os.path.join(self.savedir_config['assets'], server))
+
+    def init(self):
+        try:
+            self.table.drop()
+        except:
+            pass
+        finally:
+            self.table.create()
+        all_data = self.request_overall_json('all_gachas')
+
+        for eid, data in all_data.items():
+            if self.request_data(int(eid)) == 0:
+                time.sleep(random.uniform(4, 5))
+
+            self.table.insert(
+                int(eid),
+                data['resourceName'],
+                data['type'],
+                data['gachaName'][0] or data['gachaName'][1] or data['gachaName'][2] or data['gachaName'][3],
+                data.get('bannerAssetBundleName') or '',
+            )
+        
+    def request_assets(self, cid):
+        try:
+            json_data = self.load_json(cid) or self.request_json(cid)
+        except:
+            self.logger.error(exc_info=sys.exc_info())
+        else:
+            banner_asset_bundle_name = json_data.get('bannerAssetBundleName')
+            resourceName = json_data['resourceName']
+            final_status = 0
+            for server in self.servers:
+                if banner_asset_bundle_name:
+                    banner = f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png'
+                    if self.request_asset(banner, f'{server}/{banner_asset_bundle_name}.png') == 0:
+                        time.sleep(random.uniform(1, 2))
+            
+                logo = f'https://bestdori.com/assets/{server}/gacha/screen/{resourceName}_rip/logo.png'
+                pickup = f'https://bestdori.com/assets/{server}/gacha/screen/{resourceName}_rip/pickup.png'
+                if not os.path.exists(os.path.join(self.savedir_config['assets'], resourceName)): os.makedirs(os.path.join(self.savedir_config['assets'], resourceName))
+                if self.request_asset(logo, f'{resourceName}/logo.png') == 0:
+                    time.sleep(random.uniform(1, 2))
+                final_status = self.request_asset(pickup, f'{resourceName}/pickup.png')
+                if server != self.servers[-1] and final_status == 0:
+                    time.sleep(random.uniform(1, 2))
+            return final_status
+        return -1
+    
+    def request_data(self, cid):
+        if self.request_json(cid):
+            return self.request_assets(cid)

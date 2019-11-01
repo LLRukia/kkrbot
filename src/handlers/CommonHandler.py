@@ -27,7 +27,7 @@ class GroupChatState(States.BaseState):
             '粉键': 'pink_note',
             'gkd': 'gkd',
             '沉船': 'stop',
-            '氪': ['stop', 'kejin'],
+            '氪': ['stop', 'starstone'],
             '太强了': 'tql',
             '太强啦': 'tql',
             'tql': 'tql',
@@ -36,7 +36,11 @@ class GroupChatState(States.BaseState):
             'nb': 'nb',
             '去世': 'tuxie',
             '吐血': 'tuxie',
+            '震撼': 'surprise',
+            '想要': 'want',
         }
+        self.kkr_images = [n for n in os.listdir(os.path.join(const.datapath, 'image', 'kkr')) if os.path.isfile(os.path.join(const.datapath, 'image', 'kkr', n))]
+        [self.kkr_images.remove(word) for word in ['welcome', 'tql', 'lulao']]
         self.change_back_pic_regex = re.compile(r'^底图([0-9]*)$')
         self.bilibili_drawcard_spider = Bilibili_DrawCard_Spider()
         self.hdlr.bot.add_repeat_timer(30*60, self.bilibili_drawcard_spider.fetch_once, False)
@@ -79,7 +83,7 @@ class GroupChatState(States.BaseState):
                 await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':f'kkr/{fn if type(fn) is str else random.choice(fn)}'}))
                 return True
         if not random.randint(0, 9 if ('kkr' in msg.lower() or 'kokoro' in msg.lower()) else 49):
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'kkr/{random.randint(1, 16)}'}))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'kkr/{random.choice(self.kkr_images)}'}))
             return True
 
     async def handle_jpg(self, context):

@@ -2,7 +2,7 @@ import os
 import argparse
 
 from utils import Logger
-from crawler import CardTable, CardCrawler, EventTable, EventCrawler
+from crawler import CardTable, CardCrawler, EventTable, EventCrawler, GachaTable, GachaCrawler
 
 WORKDIR = os.path.dirname(os.path.abspath(__file__))
 LOGPATH = os.path.join(WORKDIR, 'crawler.log')
@@ -35,6 +35,14 @@ if __name__ == '__main__':
             'json': os.path.join(JSONDIR, 'events'),
             'assets': os.path.join(ASSETDIR, 'events'),
         }, 'https://bestdori.com/api/events/'
+    )
+
+    gacha_crawler = GachaCrawler(
+        logger, GachaTable(DATABASE), {
+            'overall_json': JSONDIR,
+            'json': os.path.join(JSONDIR, 'gachas'),
+            'assets': os.path.join(ASSETDIR, 'gachas'),
+        }, 'https://bestdori.com/api/gacha/'
     )
 
     getattr(eval(f'{args.content}_crawler'), args.operation)()

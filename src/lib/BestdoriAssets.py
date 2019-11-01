@@ -271,6 +271,13 @@ class Event:
                 'happy': 'happy', '橙': 'happy',
                 'pure': 'pure', '绿': 'pure',
             },
+            'eventType': {
+                '一般活动': 'story',
+                '竞演LIVE': 'versus', '对邦': 'versus',
+                '挑战LIVE': 'challenge', 'cp': 'challenge',
+                'LIVE试炼': 'live_try',
+                '任务LIVE': 'mission_live',
+            },
         }
         self._type = {
             'story': '一般活动',
@@ -309,7 +316,7 @@ class Event:
                         valid_parameter = True
                         break
                 if not valid_parameter:
-                    return {}
+                    return None
             return constraint
     
     def _detail(self, eid, server):
