@@ -231,7 +231,10 @@ def thumbnail(**options):
     return fn
 
 def open_nontransparent(filename):
-    image = Image.open(filename)
-    new_image = Image.new('RGBA', image.size, (255, 255, 255, 255))
-    new_image.paste(image, (0, 0), image)
-    return new_image
+    try:
+        image = Image.open(filename)
+        new_image = Image.new('RGBA', image.size, (255, 255, 255, 255))
+        new_image.paste(image, (0, 0), image)
+        return new_image
+    except:
+        pass

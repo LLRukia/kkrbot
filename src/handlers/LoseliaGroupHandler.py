@@ -24,13 +24,16 @@ class LoseliaGroupChatState(GroupChatState):
         if await self.fixed_roomcode_reply(context):
             return
         
-        if await self.query_gacha(context):
+        if await self.query_user_gacha(context):
             return
 
         if await self.query_card(context):
             return
         
         if await self.query_event(context):
+            return
+        
+        if await self.query_gacha(context):
             return
         
         if await self.change_back_jpg(context):

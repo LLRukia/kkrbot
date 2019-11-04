@@ -85,6 +85,7 @@ class GachaTable(Table):
             id='int primary key not null',
             resourceName='varchar(30) not null',
             type='varchar(30) not null',
+            gachaType='varchar(30) not null',
             gachaName='varchar(100) not null',
             bannerAssetBundleName='varchar(30) not null',
         )
@@ -117,28 +118,28 @@ class Crawler:
             return data
         return {}
         
-    def load_json(self, cid):
+    def load_json(self, id_):
         try:
-            with open(f'{os.path.join(self.savedir_config["json"], str(cid))}.json', 'r', encoding='utf-8') as f:
+            with open(f'{os.path.join(self.savedir_config["json"], str(id_))}.json', 'r', encoding='utf-8') as f:
                 return json.load(f)
         except:
             self.logger.error(exc_info=sys.exc_info())
             return {}
 
-    def _save_json(self, data, cid):
-        with open(f'{os.path.join(self.savedir_config["json"], str(cid))}.json', 'w', encoding='utf-8') as f:
+    def _save_json(self, data, id_):
+        with open(f'{os.path.join(self.savedir_config["json"], str(id_))}.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False)
 
     def _save_asset(self, asset, filename):
         with open(f'{os.path.join(self.savedir_config["assets"], filename)}', 'wb') as f:
             f.write(asset)
 
-    def request_json(self, cid=0):  
-        url = self.json_api + f'{cid}.json'
+    def request_json(self, id_=0):  
+        url = self.json_api + f'{id_}.json'
         res = requests.get(url)
         if res.status_code == 200:
             data = res.json()
-            self._save_json(data, cid)
+            self._save_json(data, id_)
             return data
         return {}
 
@@ -176,9 +177,9 @@ class CardCrawler(Crawler):
         self.thumb_savedirname = 'thumb'
         if not os.path.exists(os.path.join(self.savedir_config['assets'], self.thumb_savedirname)): os.makedirs(os.path.join(self.savedir_config['assets'], self.thumb_savedirname))
 
-    def request_assets(self, cid):
+    def request_assets(self, id_):
         try:
-            json_data = self.load_json(cid) or self.request_json(cid)
+            json_data = self.load_json(id_) or self.request_json(id_)
         except:
             self.logger.error(exc_info=sys.exc_info())
         else:
@@ -189,7 +190,7 @@ class CardCrawler(Crawler):
             card_after_training = f'https://bestdori.com/assets/jp/characters/resourceset/{resource_set_name}_rip/card_after_training.png'
 
             # icon
-            temp = str(cid // 50)
+            temp = str(id_ // 50)
             s = '0' * (5 - len(temp)) + temp
             normal = f'https://bestdori.com/assets/jp/thumb/chara/card{s}_rip/{resource_set_name}_normal.png'
             after_training = f'https://bestdori.com/assets/jp/thumb/chara/card{s}_rip/{resource_set_name}_after_training.png'
@@ -208,9 +209,9 @@ class CardCrawler(Crawler):
                 return self.request_asset(after_training, f'{self.thumb_savedirname}/{resource_set_name}_after_training.png')
         return -1
 
-    def request_data(self, cid):
-        if self.request_json(cid):
-            return self.request_assets(cid)
+    def request_data(self, id_):
+        if self.request_json(id_):
+            return self.request_assets(id_)
 
     def init(self):
         try:
@@ -221,7 +222,7 @@ class CardCrawler(Crawler):
             self.table.create()
         all_data = self.request_overall_json('all_cards')
 
-        for cid, data in all_data.items():
+        for id_, data in all_data.items():
             overall = {}
             if data['rarity'] < 3:
                 for s in ['performance', 'technique', 'visual']:
@@ -236,11 +237,11 @@ class CardCrawler(Crawler):
                     else:
                         overall[s] = data['stat'][str(data['levelLimit'] + 10)][s] + data['stat']['training'][s]
             
-            if self.request_data(int(cid)) == 0:
+            if self.request_data(int(id_)) == 0:
                 time.sleep(random.uniform(4, 5))
 
             self.table.insert(
-                int(cid), 
+                int(id_), 
                 data['prefix'][0] or data['prefix'][1] or data['prefix'][2] or data['prefix'][3],
                 data['characterId'],
                 (data['characterId'] - 1) // 5 + 1,
@@ -259,8 +260,8 @@ class CardCrawler(Crawler):
         all_data = self.request_overall_json('all_cards')
         all_cards = set(all_data.keys())
 
-        for cid in all_cards - local_all_cards:
-            data = all_data[cid]
+        for id_ in all_cards - local_all_cards:
+            data = all_data[id_]
             overall = {}
             if data['rarity'] < 3:
                 for s in ['performance', 'technique', 'visual']:
@@ -275,11 +276,11 @@ class CardCrawler(Crawler):
                     else:
                         overall[s] = data['stat'][str(data['levelLimit'] + 10)][s] + data['stat']['training'][s]
             
-            if self.request_data(int(cid)) == 0:
+            if self.request_data(int(id_)) == 0:
                 time.sleep(random.uniform(4, 5))
 
             self.table.insert(
-                int(cid), 
+                int(id_), 
                 data['prefix'][0] or data['prefix'][1] or data['prefix'][2] or data['prefix'][3],
                 data['characterId'],
                 (data['characterId'] - 1) // 5 + 1,
@@ -300,9 +301,9 @@ class EventCrawler(Crawler):
         for server in self.servers:
             if not os.path.exists(os.path.join(self.savedir_config['assets'], server)): os.makedirs(os.path.join(self.savedir_config['assets'], server))
     
-    def request_assets(self, cid):
+    def request_assets(self, id_):
         try:
-            json_data = self.load_json(cid) or self.request_json(cid)
+            json_data = self.load_json(id_) or self.request_json(id_)
         except:
             self.logger.error(exc_info=sys.exc_info())
         else:
@@ -322,9 +323,9 @@ class EventCrawler(Crawler):
             return self.request_asset(background, f'{asset_bundle_name}/bg_eventtop.png')
         return -1
     
-    def request_data(self, cid):
-        if self.request_json(cid):
-            return self.request_assets(cid)
+    def request_data(self, id_):
+        if self.request_json(id_):
+            return self.request_assets(id_)
 
     def init(self):
         try:
@@ -335,12 +336,12 @@ class EventCrawler(Crawler):
             self.table.create()
         all_data = self.request_overall_json('all_events')
 
-        for eid, data in all_data.items():
-            if self.request_data(int(eid)) == 0:
+        for id_, data in all_data.items():
+            if self.request_data(int(id_)) == 0:
                 time.sleep(random.uniform(4, 5))
 
             self.table.insert(
-                int(eid),
+                int(id_),
                 data['attributes'][0]['attribute'],
                 data['eventType'],
                 data['eventName'][0] or data['eventName'][1] or data['eventName'][2] or data['eventName'][3],
@@ -352,17 +353,25 @@ class EventCrawler(Crawler):
         local_all_events = set([str(r[0]) for r in self.table.select('id')])
         all_events = set(all_data.keys())
 
-        for eid in all_events - local_all_events:
-            data = all_data[eid]
-            if self.request_data(int(eid)) == 0:
+        for id_ in all_events - local_all_events:
+            data = all_data[id_]
+            if self.request_data(int(id_)) == 0:
                 time.sleep(random.uniform(4, 5))
 
             self.table.insert(
-                int(eid),
+                int(id_),
                 data['eventType'],
-                data['eventName'][0] or data['eventName'][1] or data['eventName'][2] or data['eventName'][3],
+                data['eventName'][0] or data['eventName'][1] or data['eventName'][2] or data['eventName'][3] or data['eventName'][4],
                 data['bannerAssetBundleName'],
             )
+
+        for id_ in local_all_events:
+            local_data = self.load_json(id_)
+            for i, server in enumerate(self.servers[1:]):
+                if not local_data['startAt'][1]:
+                    if self.request_data(id_) == 0:
+                        time.sleep(random.uniform(4, 5))
+                    break
 
 class GachaCrawler(Crawler):
     def __init__(self, logger, table, savedir_config, json_api):
@@ -380,21 +389,48 @@ class GachaCrawler(Crawler):
             self.table.create()
         all_data = self.request_overall_json('all_gachas')
 
-        for eid, data in all_data.items():
-            if self.request_data(int(eid)) == 0:
+        for id_, data in all_data.items():
+            if self.request_data(int(id_)) == 0:
                 time.sleep(random.uniform(4, 5))
 
             self.table.insert(
-                int(eid),
+                int(id_),
                 data['resourceName'],
                 data['type'],
-                data['gachaName'][0] or data['gachaName'][1] or data['gachaName'][2] or data['gachaName'][3],
+                data['gachaType'],
+                data['gachaName'][0] or data['gachaName'][1] or data['gachaName'][2] or data['gachaName'][3] or data['gachaName'][4],
                 data.get('bannerAssetBundleName') or '',
             )
-        
-    def request_assets(self, cid):
+    
+    def update(self):
+        all_data = self.request_overall_json('all_gachas')
+        local_all_gachas = set([str(r[0]) for r in self.table.select('id')])
+        all_gachas = set(all_data.keys())
+
+        for id_ in all_gachas - local_all_gachas:
+            data = all_data[id_]
+            if self.request_data(int(id_)) == 0:
+                time.sleep(random.uniform(4, 5))
+
+            self.table.insert(
+                int(id_),
+                data['resourceName'],
+                data['type'],
+                data['gachaName'][0],
+                data.get('bannerAssetBundleName') or '',
+            )
+
+        for id_ in local_all_gachas:
+            local_data = self.load_json(id_)
+            for i, server in enumerate(self.servers[1:]):
+                if not local_data['publishedAt'][1]:
+                    if self.request_data(id_) == 0:
+                        time.sleep(random.uniform(4, 5))
+                    break
+    
+    def request_assets(self, id_):
         try:
-            json_data = self.load_json(cid) or self.request_json(cid)
+            json_data = self.load_json(id_) or self.request_json(id_)
         except:
             self.logger.error(exc_info=sys.exc_info())
         else:
@@ -418,6 +454,6 @@ class GachaCrawler(Crawler):
             return final_status
         return -1
     
-    def request_data(self, cid):
-        if self.request_json(cid):
-            return self.request_assets(cid)
+    def request_data(self, id_):
+        if self.request_json(id_):
+            return self.request_assets(id_)

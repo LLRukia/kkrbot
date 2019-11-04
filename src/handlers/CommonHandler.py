@@ -13,7 +13,7 @@ import States
 from const import Emojis, Images
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 from Subscribes import Any, Group, Nany, Private
-from BestdoriAssets import card, event
+from BestdoriAssets import card, event, gacha
 from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
 
 class GroupChatState(States.BaseState):
@@ -160,9 +160,9 @@ class GroupChatState(States.BaseState):
                 await self.hdlr.bot.send_group_msg(gid, MultiMsg([ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('哈哈，没车')]))
             return True
         else:
-            res = re.search(r'^(.*?)([0-9]{5,6})(.*?)[Qq][0-4](.*)$', msg.strip())
+            res = re.search(r'^([0-9]{5,6})(\s+.+)*(\s+[Qq][0-4])(\s+.+)*$', msg.strip())
             if res:
-                room_code = res.group(2)
+                room_code = res.group(1)
                 flag, msg = self._submit_room_number(room_code, uid, msg)
                 if flag:
                     await self.hdlr.bot.send_group_msg(gid, MultiMsg([ImageMsg({'file':f'kkr/nb'}), StringMsg('上传车牌啦！')]))
@@ -219,7 +219,7 @@ class GroupChatState(States.BaseState):
         else:
             return None
 
-    async def query_gacha(self, context):
+    async def query_user_gacha(self, context):
         msg = context['raw_message'].strip()
         gid = context['group_id']
         if msg == '更新抽卡数据':
@@ -235,7 +235,7 @@ class GroupChatState(States.BaseState):
             ret = []
             query = False
             if res:
-                self.hdlr.bot.logger.info(f'query gacha {res.group(1)}')
+                self.hdlr.bot.logger.info(f'query gacha user {res.group(1)}')
                 query = True
                 ret = self.bilibili_drawcard_spider.get_data_by_username(res.group(1))
                 
@@ -243,7 +243,7 @@ class GroupChatState(States.BaseState):
                 res = re.search(r'^查抽卡id (.*?)$', msg)
                 if res:
                     uid = int(res.group(1))
-                    self.hdlr.bot.logger.info(f'query gacha {uid}')
+                    self.hdlr.bot.logger.info(f'query gacha user {uid}')
                     query = True
                     
                     ret = self.bilibili_drawcard_spider.get_data_by_uid(uid)
@@ -298,7 +298,12 @@ class GroupChatState(States.BaseState):
         msg = context['raw_message'].strip()
         gid = context['group_id']
         return await event.query(self.hdlr.bot.send_group_msg, msg, gid)
-
+    
+    async def query_gacha(self, context):
+        msg = context['raw_message'].strip()
+        gid = context['group_id']
+        return await gacha.query(self.hdlr.bot.send_group_msg, msg, gid)
+    
     def enter(self):
         self.hdlr.subscribe(self.group_subscribe, self.on_chat)
     

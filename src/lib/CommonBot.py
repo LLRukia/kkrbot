@@ -9,7 +9,7 @@ from handlers.LoseliaGroupHandler import LoseliaGroupHandler
 from handlers.EasyGroupHandler import EasyGroupHandler
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 import ImageProcesser
-from BestdoriAssets import card, event
+from BestdoriAssets import card, event, gacha
 
 class CommonBot(Bot):
     def TO_SUBSCRIBE(self):
@@ -76,6 +76,9 @@ class CommonBot(Bot):
                 return
             if await event.query(self.send_private_msg, msg, uid):
                 self.logger.info('query event successful')
+                return
+            if await gacha.query(self.send_private_msg, msg, uid):
+                self.logger.info('query gacha successful')
                 return
 
         self.logger.info('on_private_message %s', context)
