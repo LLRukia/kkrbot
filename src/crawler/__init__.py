@@ -39,6 +39,15 @@ class Table:
             ''', [v for k, vs in constraint.items() for v in vs]).fetchall()
         else:
             return self.conn.execute(f'select {col_exp} from {self.name}').fetchall()
+    
+    def select_or(self, *column, **constraint):
+        col_exp = '*' if not column else ','.join(column)
+        if constraint:
+            return self.conn.execute(f'''
+                select {col_exp} from {self.name} where {' or '.join([k+' in ({})'.format(','.join('?'*len(constraint[k]))) for k in constraint.keys()])} order by id asc
+            ''', [v for k, vs in constraint.items() for v in vs]).fetchall()
+        else:
+            return self.conn.execute(f'select {col_exp} from {self.name}').fetchall()
 
     def insert(self, *data):
         self.conn.execute(f'''
@@ -85,9 +94,9 @@ class GachaTable(Table):
             id='int primary key not null',
             resourceName='varchar(30) not null',
             type='varchar(30) not null',
-            gachaType='varchar(30) not null',
             gachaName='varchar(100) not null',
             bannerAssetBundleName='varchar(30) not null',
+            fixed4star='tinyint not null',
         )
 
 resource_map = {
@@ -310,10 +319,11 @@ class EventCrawler(Crawler):
             banner_asset_bundle_name = json_data['bannerAssetBundleName']
             asset_bundle_name = json_data['assetBundleName']
 
-            for server in self.servers:
-                banner = f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png'
-                if self.request_asset(banner, f'{server}/{banner_asset_bundle_name}.png') == 0:
-                    time.sleep(random.uniform(1, 2))
+            for i, server in enumerate(self.servers):
+                if json_data['startAt'][i]:
+                    banner = f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png'
+                    if self.request_asset(banner, f'{server}/{banner_asset_bundle_name}.png') == 0:
+                        time.sleep(random.uniform(1, 2))
             
             character = f'https://bestdori.com/assets/jp/event/{asset_bundle_name}/topscreen_rip/trim_eventtop.png'
             background = f'https://bestdori.com/assets/jp/event/{asset_bundle_name}/topscreen_rip/bg_eventtop.png'
@@ -360,6 +370,7 @@ class EventCrawler(Crawler):
 
             self.table.insert(
                 int(id_),
+                data['attributes'][0]['attribute'],
                 data['eventType'],
                 data['eventName'][0] or data['eventName'][1] or data['eventName'][2] or data['eventName'][3] or data['eventName'][4],
                 data['bannerAssetBundleName'],
@@ -397,9 +408,9 @@ class GachaCrawler(Crawler):
                 int(id_),
                 data['resourceName'],
                 data['type'],
-                data['gachaType'],
                 data['gachaName'][0] or data['gachaName'][1] or data['gachaName'][2] or data['gachaName'][3] or data['gachaName'][4],
                 data.get('bannerAssetBundleName') or '',
+                1 if self.load_json(id_)['paymentMethods'][0]['behavior'] == 'fixed_4_star_once' else 0
             )
     
     def update(self):
@@ -416,8 +427,9 @@ class GachaCrawler(Crawler):
                 int(id_),
                 data['resourceName'],
                 data['type'],
-                data['gachaName'][0],
+                data['gachaName'][0] or data['gachaName'][1] or data['gachaName'][2] or data['gachaName'][3] or data['gachaName'][4],
                 data.get('bannerAssetBundleName') or '',
+                1 if self.load_json(id_)['paymentMethods'][0]['behavior'] == 'fixed_4_star_once' else 0
             )
 
         for id_ in local_all_gachas:
@@ -437,20 +449,21 @@ class GachaCrawler(Crawler):
             banner_asset_bundle_name = json_data.get('bannerAssetBundleName')
             resourceName = json_data['resourceName']
             final_status = 0
-            for server in self.servers:
-                if banner_asset_bundle_name:
-                    banner = f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png'
-                    if self.request_asset(banner, f'{server}/{banner_asset_bundle_name}.png') == 0:
+            for i, server in enumerate(self.servers):
+                if json_data['publishedAt'][i]:
+                    if banner_asset_bundle_name:
+                        banner = f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png'
+                        if self.request_asset(banner, f'{server}/{banner_asset_bundle_name}.png') == 0:
+                            time.sleep(random.uniform(1, 2))
+                
+                    logo = f'https://bestdori.com/assets/{server}/gacha/screen/{resourceName}_rip/logo.png'
+                    pickup = f'https://bestdori.com/assets/{server}/gacha/screen/{resourceName}_rip/pickup.png'
+                    if not os.path.exists(os.path.join(self.savedir_config['assets'], resourceName, server)): os.makedirs(os.path.join(self.savedir_config['assets'], resourceName, server))
+                    if self.request_asset(logo, f'{resourceName}/{server}/logo.png', overwrite=server=='cn') == 0:
                         time.sleep(random.uniform(1, 2))
-            
-                logo = f'https://bestdori.com/assets/{server}/gacha/screen/{resourceName}_rip/logo.png'
-                pickup = f'https://bestdori.com/assets/{server}/gacha/screen/{resourceName}_rip/pickup.png'
-                if not os.path.exists(os.path.join(self.savedir_config['assets'], resourceName)): os.makedirs(os.path.join(self.savedir_config['assets'], resourceName))
-                if self.request_asset(logo, f'{resourceName}/logo.png') == 0:
-                    time.sleep(random.uniform(1, 2))
-                final_status = self.request_asset(pickup, f'{resourceName}/pickup.png')
-                if server != self.servers[-1] and final_status == 0:
-                    time.sleep(random.uniform(1, 2))
+                    final_status = self.request_asset(pickup, f'{resourceName}/{server}/pickup.png', overwrite=server=='cn')
+                    if server != self.servers[-1] and final_status == 0:
+                        time.sleep(random.uniform(1, 2))
             return final_status
         return -1
     

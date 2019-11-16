@@ -161,15 +161,15 @@ def thumbnail(**options):
     if not options.get('image_style'):
         box_width, box_height = first_image.size
     else:
-        if options['image_style']['width'] and options['image_style']['height']:
+        if options['image_style'].get('width') and options['image_style'].get('height'):
             box_width, box_height = options['image_style']['width'], options['image_style']['height']
-            images = [[im.resize((image_width, image_height)) for im in im_list] for im_list in images]
-        elif options['image_style']['width'] and not options['image_style']['height']:
-            images = [[im.resize((options['image_style']['width'], 180 * im.size[1] / im.size[0])) for im in im_list] for im_list in images]
-            box_width, box_height = 180, max([[im.size[1] for im in im_list] for im_list in images])
-        elif not options['image_style']['width'] and options['image_style']['height']:
-            images = [[im.resize((180 * im.size[0] / im.size[1], options['image_style']['height'])) for im in im_list] for im_list in images]
-            box_width, box_height = max([[im.size[0] for im in im_list] for im_list in images]), 180
+            images = [[im.resize((box_width, box_height)) for im in im_list] for im_list in images]
+        elif options['image_style'].get('width') and not options['image_style'].get('height'):
+            images = [[im.resize((options['image_style']['width'], options['image_style']['width'] * im.size[1] // im.size[0])) for im in im_list] for im_list in images]
+            box_width, box_height = options['image_style']['width'], max([im.size[1] for im_list in images for im in im_list])
+        elif not options['image_style'].get('width') and options['image_style'].get('height'):
+            images = [[im.resize((options['image_style']['height'] * im.size[0] // im.size[1], options['image_style']['height'])) for im in im_list] for im_list in images]
+            box_width, box_height = max([im.size[0] for im_list in images for im in im_list]), options['image_style']['height']
     
     col_num = options.get('col_num', 4)
     row_num = (len(images) - 1) // col_num + 1
@@ -238,3 +238,42 @@ def open_nontransparent(filename):
         return new_image
     except:
         pass
+
+def manual():
+    fn = 'auto_reply/manual.jpg'
+    # if os.access(os.path.join(const.datapath, 'image', fn), os.R_OK):
+    #    return fn
+    row_space = 20
+    col_space = 50
+    font = ImageFont.truetype(os.path.join(const.workpath, 'cache', 'simhei.ttf'), 20)
+    lines = [
+        'ycm/有车吗: 查询车牌(来源: https://bandoristation.com/)',
+        '底图目录: 查询底图目录(是的，不仅功能一样，连图都盗过来了，虽然还没更新。底图31，Tsugu！.jpg)',
+        '底图+数字: 切换底图',
+        'xx.jpg: 图片合成',
+        '',
+        '以下查询功能数据来源Bestdori',
+        '查卡 [稀有度] [颜色] [人物] [乐团] [技能类型]: 按条件筛选符合要求的卡片，同类条件取并集，不同类条件取交集。例如: 查卡 4x pure ksm 分',
+        '查卡+数字: 按id查询单卡信息',
+        '无框+数字: 按id查询单卡无框卡面',
+        '活动列表 [活动类型]: 按条件筛选符合要求的活动，活动类型包括“一般活动”，“竞演LIVE”或“对邦”，“挑战LIVE”或“CP”，“LIVE试炼”，“任务LIVE”',
+        '活动+数字 [服务器]: 按id查询单活动信息，默认国服，可选“日服”，“国际服”，“台服”，“国服”，“韩服”',
+        '卡池列表 [卡池类型]: 按条件筛选符合要求的卡池，卡池类型包括“常驻”或“无期限”，“限时”或“限定”或“期间限定”，“特殊”（该条件慎加，因为没啥特别的卡池），“必4”',
+        '卡池+数字 [服务器]: 按id查询单卡池信息，默认国服，可选“日服”，“国际服”，“台服”，“国服”，“韩服”',
+        '',
+        '以下查询功能数据来源bilibili开放的豹跳接口，慎用',
+        '查抽卡名字 名字: 查用户名称包含该名字的玩家出的4星',
+    ]
+
+    line_height = ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize('底图目录', font=font)[1]
+    
+    image = Image.new('RGB', (ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize(max(lines, key=lambda line: len(line)), font=font)[0] + 2 * col_space, (line_height + row_space) * len(lines)), (255, 255, 255))
+    draw = ImageDraw.Draw(image)
+    line_pos = row_space
+    
+    for i, line in enumerate(lines):
+        sz = draw.textsize(line, font=font)
+        draw.text((col_space, line_pos), line, fill=(0, 0, 0), font=font)
+        line_pos += sz[1] + row_space
+    image.save(os.path.join(const.datapath, 'image', fn))
+    return fn

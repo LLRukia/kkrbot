@@ -25,6 +25,8 @@ def main():
     import const
     const.workpath = os.path.join(filedir, '..')
     const.cachepath = os.path.join(const.workpath, 'cache')
+    const.user_profile_path = os.path.join(const.workpath, 'data', 'user_profile')
+    if not os.path.exists(const.user_profile_path): os.makedirs(const.user_profile_path)
     logger_handler = logging.FileHandler(os.path.realpath(os.path.join(const.workpath, 'app.log')))
     logger_handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'

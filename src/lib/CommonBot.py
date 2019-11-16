@@ -9,7 +9,7 @@ from handlers.LoseliaGroupHandler import LoseliaGroupHandler
 from handlers.EasyGroupHandler import EasyGroupHandler
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 import ImageProcesser
-from BestdoriAssets import card, event, gacha
+import func
 
 class CommonBot(Bot):
     def TO_SUBSCRIBE(self):
@@ -70,17 +70,33 @@ class CommonBot(Bot):
     async def on_private_message(self, context):
         msg = context['raw_message'].strip()
         uid = context['user_id']
-        if uid in [365181628]:
-            if await card.query_card(self.send_private_msg, msg, uid):
+        sub_type = context['sub_type']
+        # if uid in [365181628]:
+        if sub_type in ['friend', 'group']:
+            if await func.fixed_reply(self.send_private_msg, msg, uid):
+                self.logger.info('query manual successful')
+                return
+            if await func.change_back_jpg(self.send_private_msg, msg, uid, uid, func.cur_back_pic, self.logger):
+                self.logger.info('change back jpg successful')
+                return
+            if await func.handle_jpg(self.send_private_msg, msg, uid, uid, func.cur_back_pic, self.logger):
+                self.logger.info('handle jpg successful')
+                return
+            if await func.query_card(self.send_private_msg, msg, uid):
                 self.logger.info('query card successful')
                 return
-            if await event.query(self.send_private_msg, msg, uid):
+            if await func.query_event(self.send_private_msg, msg, uid):
                 self.logger.info('query event successful')
                 return
-            if await gacha.query(self.send_private_msg, msg, uid):
+            if await func.query_gacha(self.send_private_msg, msg, uid):
                 self.logger.info('query gacha successful')
                 return
-
+            if await func.query_user_gacha(self.send_private_msg, msg, uid, self.logger):
+                self.logger.info('query user gacha successful')
+                return
+            if await func.fixed_roomcode_reply(self.send_private_msg, msg, uid, uid, self.logger):
+                return
+        
         self.logger.info('on_private_message %s', context)
         if context['user_id'] not in [444351271, 365181628]: return {}
         if context['raw_message'].strip().startswith('/'):

@@ -1,6 +1,7 @@
 # author: Rukia
 workpath = ''
 cachepath = ''
+user_profile_path = ''
 datapath = '/home/rukia/cq/data/'
 asset_card_path = '/home/rukia/cq/data/image/assets/cards/'
 asset_card_thumb_path = '/home/rukia/cq/data/image/assets/cards/thumb/'

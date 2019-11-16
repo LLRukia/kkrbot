@@ -13,38 +13,9 @@ from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 
 from crawler import CardTable, EventTable, GachaTable
 
-class CardDB:
-    def __init__(self, conn):
-        self.conn = conn
-    
-    def select_by_single_value(self, *column, **constraint):
-        col_exp = '*' if not column else ','.join(column)
-        if constraint:
-            return self.conn.execute(f'''
-                select {col_exp} from card where {' and '.join([k+'=?' for k in constraint.keys()])} order by id asc
-            ''', tuple(constraint.values())).fetchall()
-        else:
-            return self.conn.execute(f'select {col_exp} from card').fetchall()
-
-    def select(self, *column, **constraint):
-        col_exp = '*' if not column else ','.join(column)
-        if constraint:
-            return self.conn.execute(f'''
-                select {col_exp} from card where {' and '.join([k+' in ({})'.format(','.join('?'*len(constraint[k]))) for k in constraint.keys()])} order by id asc
-            ''', [v for k, vs in constraint.items() for v in vs]).fetchall()
-        else:
-            return self.conn.execute(f'select {col_exp} from card').fetchall()
-
-    def close(self):
-        self.conn.close()
-    
-    def __del__(self):
-        self.close()
-
 class Card:
     def __init__(self):
-        # self.card_db = CardDB(sqlite3.connect(os.path.join(const.workpath, 'data', 'bestdori.db')))
-        self.card_db = CardTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
+        self.card_table = CardTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
         self._mapping = {
             'characterId': {
                 '户山香澄': 1,'香澄': 1, 'kasumi': 1, 'ksm': 1,
@@ -175,7 +146,7 @@ class Card:
     
     def _detail(self, cid):
         try:
-            name, skill_id, performance, technique, visual, type_, resource_set_name, rarity, attribute, band_id = self.card_db.select_by_single_value(
+            name, skill_id, performance, technique, visual, type_, resource_set_name, rarity, attribute, band_id = self.card_table.select_by_single_value(
                 'name', 'skillId', 'performance', 'technique', 'visual', 'type', 
                 'resourceSetName', 'rarity', 'attribute', 'bandId',
                 id=cid)[0]
@@ -191,7 +162,7 @@ class Card:
     async def query_card(self, send_handler, msg, receiver_id):   # send_handler: Bot send handler
         res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg.strip())
         if res:
-            result = self.card_db.select_by_single_value('resourceSetName', id=int(res.group(1)))
+            result = self.card_table.select_by_single_value('resourceSetName', id=int(res.group(1)))
             if result:
                 resource_set_name = result[0][0]
                 if res.group(3) == '特训前':
@@ -234,7 +205,7 @@ class Card:
             if constraints == '露佬':
                 await send_handler(receiver_id, MultiMsg([StringMsg('再查露佬头都给你锤爆\n'), ImageMsg({'file':'kkr/lulao'})]))
                 return True
-            results = self.card_db.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', **constraints)
+            results = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', **constraints)
             if results:
                 images = [[
                     ImageProcesser.merge_image(r[1], r[2], r[3], r[4]) or
@@ -359,10 +330,10 @@ class Event:
                     detail.append(StringMsg(f'+{c0["percent"]}%'))
                 
                 detail.append(StringMsg('\n奖励: '))
-                cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
-                filenames = [ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False, return_fn=True) for c in cards]
+                cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
+                filenames = [ImageProcesser.merge_image(c[1], c[2], c[3], c[4], thumbnail=True, trained=False, return_fn=True) for c in cards]
                 [detail.append(ImageMsg({'file': f})) for f in filenames]
-                [detail.append(StringMsg(f'(卡牌id: {",".join([str(i) for i in event_data["rewardCards"]])})'))]
+                [detail.append(StringMsg(f'(卡牌id: {",".join([str(c[0]) for c in cards])})'))]
             else:
                 detail.append(StringMsg('活动尚未开始'))
             return detail
@@ -404,10 +375,10 @@ class Event:
                     detail.append(ImageMsg({'file': character_filename}))
         
                     detail.append(StringMsg('\n奖励: '))
-                    cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
+                    cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
                     rewards_filename = ImageProcesser.thumbnail(
-                        images=[ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False) for c in cards],
-                        labels=[str(i) for i in event_data["rewardCards"]],
+                        images=[ImageProcesser.merge_image(c[1], c[2], c[3], c[4], thumbnail=True, trained=False) for c in cards],
+                        labels=[str(c[0]) for c in cards],
                         col_num=len(cards),
                         row_space=5,
                     )
@@ -429,10 +400,10 @@ class Event:
                                     'ID': str(gacha_id),
                                 }.items()])))
                                 detail.append(StringMsg('\nPICK UP: '))
-                                cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=new_cards)
+                                cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=new_cards)
                                 pickups_filename = ImageProcesser.thumbnail(
-                                    images=[ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False) for c in cards],
-                                    labels=[str(i) for i in new_cards],
+                                    images=[ImageProcesser.merge_image(c[1], c[2], c[3], c[4], thumbnail=True, trained=False) for c in cards],
+                                    labels=[str(c[0]) for c in cards],
                                     col_num=len(cards),
                                     row_space=5,
                                 )
@@ -483,6 +454,9 @@ class Gacha:
                 '限时': 'limited', '限定': 'limited', '期间限定': 'limited',
                 '特殊': 'special',
             },
+            'fixed4star': {
+                '必4': 1, '必四': 1,
+            }
         }
         self._type = {
             'permanent': '无期限',
@@ -531,19 +505,23 @@ class Gacha:
                         break
                 if not valid_parameter:
                     return None
-            return constraint or {'type': ['permanent', 'limited']}
+            return constraint
     
-    def _detail_ver2(self, eid, server):
-        res = self.gacha_table.select_by_single_value('bannerAssetBundleName', id=eid)
+    def _detail(self, eid, server):
+        res = self.gacha_table.select_by_single_value('bannerAssetBundleName', 'resourceName', id=eid)
         if res:
             detail = []
-            banner_asset_bundle_name = res[0][0]
+            banner_asset_bundle_name, resourceName = res[0]
             with open(os.path.join(const.workpath, 'data', 'json', 'gachas', f'{eid}.json'), 'r', encoding='utf-8') as f:
                 gacha_data = json.load(f)
             if gacha_data["publishedAt"][server]:
                 file_path = f'assets/gachas/{self._server_name[server]}/{banner_asset_bundle_name}.png'
                 if os.access(os.path.join(const.asset_gacha_path, self._server_name[server], f'{banner_asset_bundle_name}.png'), os.R_OK):
                     detail.append(ImageMsg({'file': file_path}))
+                else:
+                    file_path = f'assets/gachas/{resourceName}/{self._server_name[server]}/logo.png'
+                    if os.access(os.path.join(const.asset_gacha_path, resourceName, self._server_name[server], 'logo.png'), os.R_OK):
+                        detail.append(ImageMsg({'file': file_path}))
                 detail.append(StringMsg('\n' + '\n'.join([f'{key}: {value}' for key, value in {
                     '标题': gacha_data['gachaName'][server],
                     '种类': self._type[gacha_data['type']],
@@ -553,14 +531,16 @@ class Gacha:
                 new_cards = [card for card in gacha_data['newCards'] if gacha_data['details'][server][str(card)]['pickup']]
                 if new_cards:
                     detail.append(StringMsg('\nPICK UP: '))
-                    cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=gacha_data['newCards'])
+                    cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=gacha_data['newCards'])
                     rewards_filename = ImageProcesser.thumbnail(
-                        images=[ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False) for c in cards],
-                        labels=[str(i) for i in new_cards],
+                        images=[ImageProcesser.merge_image(c[1], c[2], c[3], c[4], thumbnail=True, trained=False) for c in cards],
+                        labels=[str(c[0]) for c in cards],
                         col_num=len(cards),
                         row_space=5,
                     )
                     detail.append(ImageMsg({'file': rewards_filename}))
+                
+                detail.append(StringMsg(f'\n描述: {gacha_data["description"][server]}'))
                 
                 if self._gacha_event[server].get(str(eid)):
                     detail.append(StringMsg('\n关联活动: '))
@@ -576,10 +556,10 @@ class Gacha:
                             'ID': str(event_id),
                         }.items()])))
                         detail.append(StringMsg('\n奖励: '))
-                        cards = self.card_table.select('resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
+                        cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
                         rewards_filename = ImageProcesser.thumbnail(
-                            images=[ImageProcesser.merge_image(c[0], c[1], c[2], c[3], thumbnail=True, trained=False) for c in cards],
-                            labels=[str(i) for i in event_data["rewardCards"]],
+                            images=[ImageProcesser.merge_image(c[1], c[2], c[3], c[4], thumbnail=True, trained=False) for c in cards],
+                            labels=[str(c[0]) for c in cards],
                             col_num=len(cards),
                             row_space=5,
                         )
@@ -591,7 +571,7 @@ class Gacha:
     async def query(self, send_handler, msg, receiver_id):
         res = re.search(r'^卡池(\d+)(\s+(日服|国际服|台服|国服|韩服))?$', msg.strip())
         if res:
-            detail = self._detail_ver2(int(res.group(1)), self._server[res.group(3) or '国服'])
+            detail = self._detail(int(res.group(1)), self._server[res.group(3) or '国服'])
             if detail is not None:
                 await send_handler(receiver_id, MultiMsg(detail))
             else:
@@ -600,15 +580,20 @@ class Gacha:
         
         constraints = self._parse_query_command(msg.strip())
         if constraints is not None:
-            results = self.gacha_table.select('id', 'type', 'gachaName', 'bannerAssetBundleName', **constraints)
+            if constraints == {}:
+                results = self.gacha_table.select_or('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', type=['permanent', 'limited'], fixed4star=[1])
+            else:
+                results = self.gacha_table.select('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', **constraints) 
             if results:
                 images = [[
                     ImageProcesser.open_nontransparent(os.path.join(const.asset_gacha_path, 'jp', f'{r[3]}.png')) or
+                    ImageProcesser.open_nontransparent(os.path.join(const.asset_gacha_path, r[4], 'jp', 'logo.png')) or
                     ImageProcesser.white_padding(420, 140),
                 ] for r in results]
                 texts = [f'{r[0]}: {r[2]} ({self._type[r[1]]})' for r in results]
                 MAX_NUM = 32
                 file_names = [ImageProcesser.thumbnail(images=images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                    image_style={'height': 140},
                     labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
                     label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
                     col_space=20,
@@ -621,5 +606,5 @@ class Gacha:
         return False
 
 card = Card()
-event = Event(card.card_db)
-gacha = Gacha(card.card_db)
+event = Event(card.card_table)
+gacha = Gacha(card.card_table)

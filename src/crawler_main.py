@@ -19,7 +19,6 @@ parser.add_argument('-c', '--content', type=str, help='card or event')
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    assert args.operation in ['init', 'update']
     logger = Logger('crawler', LOGPATH)
     
     card_crawler = CardCrawler(
@@ -45,11 +44,12 @@ if __name__ == '__main__':
             'assets': os.path.join(ASSETDIR, 'gachas'),
         }, 'https://bestdori.com/api/gacha/'
     )
-
-    # getattr(eval(f'{args.content}_crawler'), args.operation)()
-    event_gacha(
-        JSONDIR,
-        DATABASE,
-        os.path.join(JSONDIR, 'event_gacha.json'),
-        logger,
-    )
+    if args.operation in ['init', 'update']:
+        getattr(eval(f'{args.content}_crawler'), args.operation)()
+    else:
+        event_gacha(
+            JSONDIR,
+            DATABASE,
+            os.path.join(JSONDIR, 'event_gacha.json'),
+            logger,
+        )
