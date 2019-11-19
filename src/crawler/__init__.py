@@ -379,7 +379,7 @@ class EventCrawler(Crawler):
         for id_ in local_all_events:
             local_data = self.load_json(id_)
             for i, server in enumerate(self.servers[1:]):
-                if not local_data['startAt'][1]:
+                if not local_data['startAt'][i]:
                     if self.request_data(id_) == 0:
                         time.sleep(random.uniform(4, 5))
                     break
@@ -435,7 +435,7 @@ class GachaCrawler(Crawler):
         for id_ in local_all_gachas:
             local_data = self.load_json(id_)
             for i, server in enumerate(self.servers[1:]):
-                if not local_data['publishedAt'][1]:
+                if not local_data['publishedAt'][i]:
                     if self.request_data(id_) == 0:
                         time.sleep(random.uniform(4, 5))
                     break
