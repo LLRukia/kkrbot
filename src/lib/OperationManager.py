@@ -20,7 +20,8 @@ class OperationManager:
     def __init__(self, logger):
         if os.access(os.path.join(const.user_profile_path, 'user_profile.json'), os.R_OK):
             with open(os.path.join(const.user_profile_path, 'user_profile.json'), 'r', encoding='utf-8') as f:
-                self.user_profile = json.load(f)
+                self.user_profile = defaultdict(dict)
+                self.user_profile.update(json.load(f))
         else:
             self.user_profile = defaultdict(dict)
             self.user_profile.update({str(qq_id): {'authority': 'admin'} for qq_id in [444351271, 365181628]})
