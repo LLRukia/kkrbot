@@ -20,18 +20,57 @@ def image_merge(back_number, s, get_im_obj=False):
         return f'auto_reply/{back_number}/%s' % filename
     img_path = os.path.join(const.cachepath, f'{back_number}.jpg')
     im_src = Image.open(img_path)
-    real_width = max(3, im_src.width // max(6, len(s)))
-    font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
-    real_height = real_width + SPACING
-    im = Image.new('RGB', (im_src.width, im_src.height + real_height), (255,255,255))
-    im.paste(im_src)
-    text_width = im_src.width
+    if back_number in [f'back_{n}' for n in [38, 46, 47, 51, 52, 53]]:
+        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3) * 4 // 5)
+        font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
+        real_height = real_width + SPACING
+        im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
+        im.paste(im_src)
+        text_width = im_src.width
 
-    draw = ImageDraw.Draw(im)
-    sz = draw.textsize(s, font=font)
-    x = (text_width - sz[0]) / 2
-    y = im_src.height
-    draw.text((x, y), s, fill=(23, 0, 0), font=font)
+        draw = ImageDraw.Draw(im)
+        sz = draw.textsize(s, font=font)
+        x = (text_width - sz[0]) / 2
+        y = im_src.height - real_height
+        draw.text((x, y), s, fill=(245, 255, 250), font=font)
+    elif back_number in [f'back_{n}' for n in [33]]:
+        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3) * 4 // 5)
+        font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
+        real_height = real_width + SPACING
+        im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
+        im.paste(im_src)
+        text_width = im_src.width
+        draw = ImageDraw.Draw(im)
+        sz = draw.textsize(s, font=font)
+        x = (text_width - sz[0]) / 2
+        y = im_src.height - 2 * real_height
+        draw.text((x, y), s, fill=(245, 255, 250), font=font)
+    elif back_number in [f'back_{n}' for n in [50]]:
+        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3) * 4 // 5)
+        font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
+        real_height = real_width + SPACING
+        im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
+        im.paste(im_src)
+        text_width = im_src.width
+
+        draw = ImageDraw.Draw(im)
+        sz = draw.textsize(s, font=font)
+        x = (text_width - sz[0]) / 2
+        y = 5
+        draw.text((x, y), s, fill=(23, 0, 0), font=font)
+    else:
+        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3))
+        font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
+        real_height = real_width + SPACING
+        im = Image.new('RGB', (im_src.width, im_src.height + real_height), (255,255,255))
+        im.paste(im_src)
+        text_width = im_src.width
+
+        draw = ImageDraw.Draw(im)
+        sz = draw.textsize(s, font=font)
+        x = (text_width - sz[0]) / 2
+        y = im_src.height
+        draw.text((x, y), s, fill=(23, 0, 0), font=font)
     if get_im_obj:
         return im
     else:
@@ -48,6 +87,8 @@ def init():
             if f.startswith('back_') and f.endswith('.jpg'):
                 num = int(back_regex.findall(f)[0])
                 CUR_BACK_PIC_SET.add(num)
+                save_path = os.path.join(const.datapath, 'image', 'auto_reply', f'back_{num}')
+                if not os.path.exists(save_path): os.makedirs(save_path)
     
     cur_back_pic_nums = len(CUR_BACK_PIC_SET)
 

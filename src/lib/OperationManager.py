@@ -170,7 +170,7 @@ class OperationManager:
 
     async def query_user_gacha(self, send_handler, msg, receiver_id, logger=None):
         if msg == '更新抽卡数据':
-            l = bilibili_drawcard_spider.fetch_once()
+            l = self.bilibili_drawcard_spider.fetch_once()
             if not l is None:
                 await send_handler(receiver_id, MultiMsg([ImageMsg({'file': f'kkr/nb'}), StringMsg(f'又有新的{l}个出货记录了！')]))
             else:
@@ -184,7 +184,7 @@ class OperationManager:
             if res:
                 self.logger.info(f'query gacha user {res.group(1)}')
                 query = True
-                ret = bilibili_drawcard_spider.get_data_by_username(res.group(1))
+                ret = self.bilibili_drawcard_spider.get_data_by_username(res.group(1))
                 
             else:
                 res = re.search(r'^查抽卡id (.*?)$', msg)
@@ -193,7 +193,7 @@ class OperationManager:
                     self.logger.info(f'query gacha user {uid}')
                     query = True
                     
-                    ret = bilibili_drawcard_spider.get_data_by_uid(uid)
+                    ret = self.bilibili_drawcard_spider.get_data_by_uid(uid)
             
             if not query:
                 return False
