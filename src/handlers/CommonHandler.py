@@ -11,7 +11,6 @@ from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 from Subscribes import Any, Group, Nany, Private
 from BestdoriAssets import card, event, gacha
 from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
-import func
 
 class GroupChatState(States.BaseState):
     def __init__(self, hdlr, gid=None):
@@ -37,7 +36,7 @@ class GroupChatState(States.BaseState):
         }
         self.kkr_images = [n for n in os.listdir(os.path.join(const.datapath, 'image', 'kkr')) if os.path.isfile(os.path.join(const.datapath, 'image', 'kkr', n))]
         [self.kkr_images.remove(word) for word in ['welcome', 'tql', 'lulao']]
-        self.hdlr.bot.add_repeat_timer(30*60, func.bilibili_drawcard_spider.fetch_once, False)
+        self.operator = self.hdlr.bot.operator
     
     async def on_chat(self, context):
         if await self.fixed_reply(context):
@@ -104,51 +103,51 @@ class GroupChatState(States.BaseState):
         gid = context['group_id']
         self.last_message[gid] = ''
         self.repeat_users[gid].clear()
-        await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}))
+        await self.operator.send_group_msg(gid, ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}))
 
     async def change_back_jpg(self, context):
         msg = context['raw_message']
         gid = context['group_id']
         uid = context['sender']['user_id']
-        return await func.change_back_jpg(self.hdlr.bot.send_group_msg, msg, gid, uid, func.cur_back_pic, self.hdlr.bot.logger)
+        return await self.operator.change_back_jpg(self.hdlr.bot.send_group_msg, msg, gid, uid, self.hdlr.bot.logger)
     
     async def handle_jpg(self, context):
         msg = context['raw_message']
         gid = context['group_id']
         uid = context['sender']['user_id']
-        return await func.handle_jpg(self.hdlr.bot.send_group_msg, msg, gid, uid, func.cur_back_pic, self.hdlr.bot.logger)
+        return await self.operator.handle_jpg(self.hdlr.bot.send_group_msg, msg, gid, uid, self.hdlr.bot.logger)
     
     async def fixed_reply(self, context):
         msg = context['raw_message']
         gid = context['group_id']
         uid = context['sender']['user_id']
-        return await func.fixed_reply(self.hdlr.bot.send_group_msg, msg, gid)
+        return await self.operator.fixed_reply(self.hdlr.bot.send_group_msg, msg, gid)
 
     async def fixed_roomcode_reply(self, context):
         msg = context['raw_message']
         gid = context['group_id']
         uid = context['sender']['user_id']
-        return await func.fixed_roomcode_reply(self.hdlr.bot.send_group_msg, msg, gid, uid, self.hdlr.bot.logger)
+        return await self.operator.fixed_roomcode_reply(self.hdlr.bot.send_group_msg, msg, gid, uid, True, self.hdlr.bot.logger)
 
     async def query_user_gacha(self, context):
         msg = context['raw_message'].strip()
         gid = context['group_id']
-        return await func.query_user_gacha(self.hdlr.bot.send_group_msg, msg, gid, self.hdlr.bot.logger)
+        return await self.operator.query_user_gacha(self.hdlr.bot.send_group_msg, msg, gid, self.hdlr.bot.logger)
 
     async def query_card(self, context):
         msg = context['raw_message'].strip()
         gid = context['group_id']
-        return await func.query_card(self.hdlr.bot.send_group_msg, msg, gid)
+        return await self.operator.query_card(self.hdlr.bot.send_group_msg, msg, gid)
     
     async def query_event(self, context):
         msg = context['raw_message'].strip()
         gid = context['group_id']
-        return await func.query_event(self.hdlr.bot.send_group_msg, msg, gid)
+        return await self.operator.query_event(self.hdlr.bot.send_group_msg, msg, gid)
     
     async def query_gacha(self, context):
         msg = context['raw_message'].strip()
         gid = context['group_id']
-        return await func.query_gacha(self.hdlr.bot.send_group_msg, msg, gid)
+        return await self.operator.query_gacha(self.hdlr.bot.send_group_msg, msg, gid)
     
     def enter(self):
         self.hdlr.subscribe(self.group_subscribe, self.on_chat)

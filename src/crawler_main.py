@@ -47,7 +47,7 @@ if __name__ == '__main__':
     if args.operation in ['init', 'update']:
         content = set(args.content or ['card', 'event', 'gacha']) & set(['card', 'event', 'gacha'])
         for c in content:
-            getattr(eval(f'{args.content}_crawler'), args.operation)()
+            getattr(eval(f'{c}_crawler'), args.operation)()
         if content >= set(['event', 'gacha']) or 'event-gacha' in args.content:
             event_gacha(
                 JSONDIR,

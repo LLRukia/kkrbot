@@ -9,7 +9,7 @@ from handlers.LoseliaGroupHandler import LoseliaGroupHandler
 from handlers.EasyGroupHandler import EasyGroupHandler
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 import ImageProcesser
-import func
+from OperationManager import OperationManager
 
 class CommonBot(Bot):
     def TO_SUBSCRIBE(self):
@@ -24,8 +24,10 @@ class CommonBot(Bot):
         super().__init__(server)
         # self.add_timer(5, self.get_status)
         # self.add_repeat_timer(60*30, self.get_status)
+        self.operator = OperationManager(self.logger)
         self.add_handler(LoseliaGroupHandler(self, [Groups.LU]))
         self.add_handler(EasyGroupHandler(self, [Groups.ZOO, Groups.YISHANYISHAN]))
+        self.add_repeat_timer(30*60, self.operator.bilibili_drawcard_spider.fetch_once, False)
         self.begin()
 
     async def get_status(self):
@@ -71,30 +73,29 @@ class CommonBot(Bot):
         msg = context['raw_message'].strip()
         uid = context['user_id']
         sub_type = context['sub_type']
-        # if uid in [365181628]:
         if sub_type in ['friend', 'group']:
-            if await func.fixed_reply(self.send_private_msg, msg, uid):
+            if await self.operator.fixed_reply(self.send_private_msg, msg, uid):
                 self.logger.info('query manual successful')
                 return
-            if await func.change_back_jpg(self.send_private_msg, msg, uid, uid, func.cur_back_pic, self.logger):
+            if await self.operator.change_back_jpg(self.send_private_msg, msg, uid, uid, self.logger):
                 self.logger.info('change back jpg successful')
                 return
-            if await func.handle_jpg(self.send_private_msg, msg, uid, uid, func.cur_back_pic, self.logger):
+            if await self.operator.handle_jpg(self.send_private_msg, msg, uid, uid, self.logger):
                 self.logger.info('handle jpg successful')
                 return
-            if await func.query_card(self.send_private_msg, msg, uid):
+            if await self.operator.query_card(self.send_private_msg, msg, uid):
                 self.logger.info('query card successful')
                 return
-            if await func.query_event(self.send_private_msg, msg, uid):
+            if await self.operator.query_event(self.send_private_msg, msg, uid):
                 self.logger.info('query event successful')
                 return
-            if await func.query_gacha(self.send_private_msg, msg, uid):
+            if await self.operator.query_gacha(self.send_private_msg, msg, uid):
                 self.logger.info('query gacha successful')
                 return
-            if await func.query_user_gacha(self.send_private_msg, msg, uid, self.logger):
+            if await self.operator.query_user_gacha(self.send_private_msg, msg, uid, self.logger):
                 self.logger.info('query user gacha successful')
                 return
-            if await func.fixed_roomcode_reply(self.send_private_msg, msg, uid, uid, self.logger):
+            if await self.operator.fixed_roomcode_reply(self.send_private_msg, msg, uid, uid, logger=self.logger):
                 return
         
         self.logger.info('on_private_message %s', context)
