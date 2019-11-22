@@ -21,10 +21,10 @@ class DrawCard_Item:
         return self.gacha_at < rhs.gacha_at
 
     def __eq__(self, rhs):
-        return self.gacha_at == rhs.gacha_at and self.user_id == rhs.user_id
+        return self.gacha_at == rhs.gacha_at and self.user_id == rhs.user_id and self.situation_id == rhs.situation_id
 
     def __hash__(self):
-        return (str(self.gacha_at) + str(self.user_id)).__hash__()
+        return (str(self.gacha_at) + str(self.user_id * self.situation_id)).__hash__()
 
     def __str__(self):
         return str({
@@ -42,8 +42,13 @@ class Bilibili_DrawCard_Spider:
 
     def __init__(self):
         self._data = self._load_data(self.SAVEFILE)
+        self._refresh_data()
+
+    def _refresh_data(self):
+        self._data = {i for i in self._data if ((time.time() - (i.gacha_at // 1000)) < (30 * 24* 3600))}
 
     def _save_data(self, filename, data):
+        return
         try:
             tempname = filename + '.tmp'
             with open(tempname, 'wb') as f:
@@ -71,6 +76,7 @@ class Bilibili_DrawCard_Spider:
                 return 0
             l = len(spider_data - self._data)
             self._data |= spider_data
+            self._refresh_data()
             self._save_data(self.SAVEFILE, self._data)
             return l
         except:
@@ -111,5 +117,6 @@ class Bilibili_DrawCard_Spider:
 if __name__ == '__main__':
     Bilibili_DrawCard_Spider.SAVEFILE = '/home/rukia/bot/cache/save.pickle'
     b = Bilibili_DrawCard_Spider()
-    for i in b.get_data_by_username('露村'):
-        print (i)
+    for i in b._data:
+        print(i.gacha_at)
+        break

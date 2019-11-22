@@ -50,8 +50,14 @@ class LoseliaGroupChatState(GroupChatState):
     async def handle_lavish_loselia(self, context):
         msg = context['raw_message']
         gid = context['group_id']
+        sender_id = context['sender']['user_id']
+        if sender_id == 365181628 and random.randint(0, 20) == 1:
+            s = random.choice(['芽佬凶凶QAQ', '芽佬别放屁啦，快去屁歌吧！', '芽佬哭哭'])
+            await self.hdlr.bot.send_group_msg(gid, StringMsg(s))
+            return True
+
         if ('屁话' in msg or '人话' in msg or '放屁' in msg or '狗话' in msg) and random.randint(0, 1) == 1:
-            await self.hdlr.bot.send_group_msg(gid, MultiMsg([StringMsg('你是说这样的吗'), ImageMsg({'file': f'll_fangpi{random.choice(["","1"])}.png'})]))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'll_fangpi{random.choice(["","1"])}.png'}))
             return True
         if '撸' in msg and random.randint(0, 7) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_love.jpg'}))
