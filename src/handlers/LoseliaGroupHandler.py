@@ -4,6 +4,7 @@ from collections import defaultdict
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 from handlers.CommonHandler import CommonGroupHandler, GroupChatState
 from Subscribes import GroupEx
+from string import Template
 
 class LoseliaGroupHandler(CommonGroupHandler):
     def __init__(self, bot, gid):
@@ -15,9 +16,30 @@ class LoseliaGroupChatState(GroupChatState):
     def __init__(self, hdlr, gid=None):
         super().__init__(hdlr, gid)
         self.group_subscribe_ex = GroupEx(gid)
-        
+        self.members = {
+            444351271: {'nn': ['露露', '露露佬'], 'tpl': [
+                Template('${nn}放屁'), Template('${nn}哭哭'), Template('${nn}arc摘星了吗'), Template('${nn}今年几岁')],
+            'prob': 0.06},
+            272001610: {'nn': ['露佬'], 'tpl': [Template('${nn}放屁'), Template('${nn}唱歌')], 'prob': 0.06},
+            510553691: {'nn': ['秃哥'], 'tpl': [Template('${nn}下班了吗')], 'prob': 0.02},
+            839867673: {'nn': ['汐酱'], 'tpl': [Template('${nn}凶凶')], 'prob': 0.03},
+            921255023: {'nn': ['ru佬'], 'tpl': [Template('${nn}单手p歌')], 'prob': 0.03},
+            1762262568: {'nn': ['紫苑神仙'], 'tpl': [Template('${nn}出勤了吗')], 'prob': 0.03},
+            1589443608: {'nn': ['r佬'], 'tpl': [Template('${nn}arc摘星了吗')], 'prob': 0.03},
+            137127931: {'nn': ['喵喵']},
+            1289393503: {'nn': ['土豆鸽']},
+            985460698: {'nn': ['小花'], 'tpl': [Template('${nn}又飞升了')], 'prob': 0.04},
+            2695671482: {'nn': ['神乐'], 'tpl': [Template('${nn}女装'), Template('${nn}快发瑟图')], 'prob': 0.05},
+            1119671753: {'nn': ['兔兔'], 'prob': 0.03},
+            1066379234: {'nn': ['小黑'], 'tpl': [Template('${nn}快发瑟图')], 'prob': 0.05},
+        }
+        self.COUNT_PERIOD = 60
+        self.prob_decay = 1
+        self.chat_count = 0
+        self.hdlr.bot.add_repeat_timer(self.COUNT_PERIOD, self.update_prob_decay, False)
 
     async def on_chat(self, context):
+        self.chat_count += 1
         if await self.fixed_reply(context):
             return
 
@@ -51,11 +73,11 @@ class LoseliaGroupChatState(GroupChatState):
         msg = context['raw_message']
         gid = context['group_id']
         sender_id = context['sender']['user_id']
-        if sender_id == 365181628 and random.randint(0, 20) == 1:
-            s = random.choice(['芽佬凶凶QAQ', '芽佬别放屁啦，快去屁歌吧！', '芽佬哭哭'])
-            await self.hdlr.bot.send_group_msg(gid, StringMsg(s))
+        if random.random() < self.members.get(sender_id, {'prob': 0}).get('prob', 0.01) * self.prob_decay:
+            s = random.choice([Template('${nn}别放屁啦，快去屁歌吧！')] + self.members[sender_id].get('tpl', []))
+            nn = random.choice(self.members[sender_id]['nn'])
+            await self.hdlr.bot.send_group_msg(gid, StringMsg(s.substitute(nn=nn)))
             return True
-
         if ('屁话' in msg or '人话' in msg or '放屁' in msg or '狗话' in msg) and random.randint(0, 1) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'll_fangpi{random.choice(["","1"])}.png'}))
             return True
@@ -77,7 +99,7 @@ class LoseliaGroupChatState(GroupChatState):
         if '草' in msg and random.randint(0, 10) == 1:
             await self.hdlr.bot.send_group_msg(gid, StringMsg('草'))
             return True
-
+        
     async def handle_common_chat(self, context):
         if await self.handle_lavish_loselia(context):
             return True
@@ -94,6 +116,15 @@ class LoseliaGroupChatState(GroupChatState):
     async def on_group_increase(self, context):
         await self.hdlr.bot.send_group_msg(context['group_id'], MultiMsg([StringMsg('欢迎新露佬吹！'), ImageMsg({'file': 'kkr/welcome'})]))
         return {}
+
+    def update_prob_decay(self):
+        count_per_second = self.chat_count / self.COUNT_PERIOD
+        THRESHOLD = 0.1
+        if count_per_second < THRESHOLD:
+            self.prob_decay = 1
+        else:
+            self.prob_decay = THRESHOLD / count_per_second
+        self.chat_count = 0
 
     def enter(self):
         self.hdlr.subscribe(self.group_subscribe_ex, self.on_group_increase)
