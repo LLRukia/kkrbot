@@ -237,29 +237,29 @@ class OperationManager:
                 await send_handler(receiver_id, MultiMsg([ImageMsg({'file': f'kkr/nb'}), StringMsg('出货的也太多了，kkr好累！下次再查吧！')]))
             return True
 
-    def _submit_room_number(number, user_id, raw_msg, source='kkrbot', logger=None):
-            payload = {
-                'function': 'submit_room_number',
-                'number': number,
-                'user_id': user_id,
-                'raw_message': raw_msg,
-                'source': source,
-                'token': 'n59erYT4P',
-            }
-            r = requests.post('http://api.bandoristation.com/', params=payload)
-            if r.status_code == 200:
-                d = r.json()
-                try:
-                    if d['status'] == 'failure':
-                        return False, d['response']
-                    else:
-                        return True, ''
-                except Exception as e:
-                    return False, str(e)
-            else:
-                return False, 'bad_request'
+    def _submit_room_number(self, number, user_id, raw_msg, source='kkrbot', logger=None):
+        payload = {
+            'function': 'submit_room_number',
+            'number': number,
+            'user_id': user_id,
+            'raw_message': raw_msg,
+            'source': source,
+            'token': 'n59erYT4P',
+        }
+        r = requests.post('http://api.bandoristation.com/', params=payload)
+        if r.status_code == 200:
+            d = r.json()
+            try:
+                if d['status'] == 'failure':
+                    return False, d['response']
+                else:
+                    return True, ''
+            except Exception as e:
+                return False, str(e)
+        else:
+            return False, 'bad_request'
 
-    def _query_room_number(logger=None):
+    def _query_room_number(self, logger=None):
         r = requests.get('http://api.bandoristation.com/?function=query_room_number')
         if r.status_code == 200:
             ret = []
