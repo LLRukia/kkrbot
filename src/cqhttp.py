@@ -3,7 +3,7 @@ import os, argparse
 from aiocqhttp import CQHttp
 
 parser = argparse.ArgumentParser(description='cqbot')
-parser.add_argument('-d', '--datapath', type=str, help='static resource path', nargs='*', default=os.path.abspath('../../cq/data/'))
+parser.add_argument('-d', '--datapath', type=str, help='static resource path', nargs='*', default=os.path.abspath('../cq/data/'))
 
 def create_bot(server, bot_type='Common'):
     bot = None
