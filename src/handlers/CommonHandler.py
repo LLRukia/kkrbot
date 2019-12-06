@@ -69,7 +69,7 @@ class GroupChatState(States.BaseState):
         msg = context['raw_message']
         gid = context['group_id']
         if ('露佬' in msg and '唱歌' in msg) and not random.randint(0, 9):
-            await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'xiaoxingxing.silk'}))
+            await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'auto_reply/xiaoxingxing.silk'}))
             return True
         for kwd, fn in self.preset_keywords.items():
             if kwd in msg and not random.randint(0, 4):

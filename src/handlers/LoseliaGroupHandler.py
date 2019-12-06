@@ -18,20 +18,30 @@ class LoseliaGroupChatState(GroupChatState):
         self.group_subscribe_ex = GroupEx(gid)
         self.members = {
             444351271: {'nn': ['露露', '露露佬'], 'tpl': [
-                Template('${nn}放屁'), Template('${nn}哭哭'), Template('${nn}arc摘星了吗'), Template('${nn}今年几岁')],
-            'prob': 0.06},
-            272001610: {'nn': ['露佬'], 'tpl': [Template('${nn}放屁'), Template('${nn}唱歌')], 'prob': 0.06},
-            510553691: {'nn': ['秃哥'], 'tpl': [Template('${nn}下班了吗')], 'prob': 0.02},
-            839867673: {'nn': ['汐酱'], 'tpl': [Template('${nn}凶凶')], 'prob': 0.03},
-            921255023: {'nn': ['ru佬'], 'tpl': [Template('${nn}单手p歌')], 'prob': 0.03},
-            1762262568: {'nn': ['紫苑神仙'], 'tpl': [Template('${nn}出勤了吗')], 'prob': 0.03},
-            1589443608: {'nn': ['r佬'], 'tpl': [Template('${nn}arc摘星了吗')], 'prob': 0.03},
-            137127931: {'nn': ['喵喵']},
-            1289393503: {'nn': ['土豆鸽']},
-            985460698: {'nn': ['小花'], 'tpl': [Template('${nn}又飞升了')], 'prob': 0.04},
-            2695671482: {'nn': ['神乐'], 'tpl': [Template('${nn}女装'), Template('${nn}快发瑟图')], 'prob': 0.05},
-            1119671753: {'nn': ['兔兔'], 'prob': 0.03},
-            1066379234: {'nn': ['小黑'], 'tpl': [Template('${nn}快发瑟图')], 'prob': 0.05},
+                Template('${nn}放屁'),
+                Template('${nn}哭哭'),
+                Template('${nn}摘星了吗'),
+                Template('${nn}今年几岁'),
+            ], 'prob': 0.04},
+            272001610: {'nn': ['露佬'], 'tpl': [Template('${nn}放屁'), Template('${nn}唱歌')], 'prob': 0.04},
+            510553691: {'nn': ['秃哥'], 'tpl': [Template('${nn}上班了吗'), Template('${nn}下班了吗')], 'prob': 0.02},
+            839867673: {'nn': ['汐酱'], 'tpl': [Template('${nn}凶凶QAQ')], 'prob': 0.01},
+            921255023: {'nn': ['ru佬'], 'tpl': [Template('${nn}单手p歌')], 'prob': 0.02},
+            1762262568: {'nn': ['紫苑神仙'], 'tpl': [Template('${nn}出勤了吗')], 'prob': 0.02},
+            1589443608: {'nn': ['r佬'], 'tpl': [Template('${nn}摘星了吗')], 'prob': 0.02},
+            137127931: {'nn': ['喵喵'], 'tpl': [Template('${nn}快一键变蠢')], 'prob': 0.02},
+            985460698: {'nn': ['小花'], 'tpl': [Template('${nn}又飞升了')], 'prob': 0.02},
+            2695671482: {'nn': ['神乐'], 'tpl': [Template('${nn}女装'), Template('${nn}快发瑟图')], 'prob': 0.03},
+            1119671753: {'nn': ['兔兔'], 'tpl': [Template('${nn}富婆')], 'prob': 0.02},
+            1066379234: {'nn': ['小黑'], 'tpl': [Template('${nn}快发瑟图')], 'prob': 0.03},
+            365181628: {'nn': ['鸭锤', '芽佬', '放屁神鸭', '紫苑老公', '渣男鸭'], 'tpl': [
+                Template('${nn}泡妞了吗'),
+                Template('${nn}好强呀'),
+                Template('${nn}真帅，啊我死啦'),
+                Template('${nn}放屁好臭'),
+                Template('${nn}凶凶QAQ'),
+                Template('${nn}贴贴露佬了吗'),
+            ], 'prob': 0.04},
         }
         self.COUNT_PERIOD = 60
         self.prob_decay = 1
@@ -111,7 +121,7 @@ class LoseliaGroupChatState(GroupChatState):
         self.last_message[gid] = ''
         self.repeat_users[gid].clear()
         await self.hdlr.bot.send_group_msg(gid, StringMsg('别整天复读啦，我要看到露佬smile！'))
-        await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file':'are_you_smiling.mp3'})) 
+        await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'auto_reply/are_you_smiling.mp3'})) 
 
     async def on_group_increase(self, context):
         await self.hdlr.bot.send_group_msg(context['group_id'], MultiMsg([StringMsg('欢迎新露佬吹！'), ImageMsg({'file': 'kkr/welcome'})]))

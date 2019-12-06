@@ -12,6 +12,8 @@ CUR_BACK_PIC_SET = set()
 BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT = 140, 130
 BACK_PIC_NUM_EACH_LINE = 5
 
+half_en_len = lambda s: (len(s) + (len(s.encode(encoding='utf-8')) - len(s)) // 2) // 2
+
 def image_merge(back_number, s, get_im_obj=False):
     back_number = 'back_%d' % back_number
     filename = '%s.jpg' % s
@@ -21,7 +23,7 @@ def image_merge(back_number, s, get_im_obj=False):
     img_path = os.path.join(const.cachepath, f'{back_number}.jpg')
     im_src = Image.open(img_path)
     if back_number in [f'back_{n}' for n in [38, 46, 47, 51, 52, 53]]:
-        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3) * 4 // 5)
+        real_width = max(3, im_src.width // max(6, half_en_len(s)) * 4 // 5)
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
         im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
@@ -34,7 +36,7 @@ def image_merge(back_number, s, get_im_obj=False):
         y = im_src.height - real_height
         draw.text((x, y), s, fill=(245, 255, 250), font=font)
     elif back_number in [f'back_{n}' for n in [33]]:
-        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3) * 4 // 5)
+        real_width = max(3, im_src.width // max(6, half_en_len(s)) * 4 // 5)
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
         im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
@@ -46,7 +48,7 @@ def image_merge(back_number, s, get_im_obj=False):
         y = im_src.height - 2 * real_height
         draw.text((x, y), s, fill=(245, 255, 250), font=font)
     elif back_number in [f'back_{n}' for n in [50]]:
-        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3) * 4 // 5)
+        real_width = max(3, im_src.width // max(6, half_en_len(s)) * 4 // 5)
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
         im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
@@ -59,7 +61,7 @@ def image_merge(back_number, s, get_im_obj=False):
         y = 5
         draw.text((x, y), s, fill=(23, 0, 0), font=font)
     else:
-        real_width = max(3, im_src.width // max(6, len(s.encode(encoding='utf-8')) // 3))
+        real_width = max(3, im_src.width // max(6, half_en_len(s)))
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
         im = Image.new('RGB', (im_src.width, im_src.height + real_height), (255,255,255))
