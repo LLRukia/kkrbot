@@ -61,7 +61,7 @@ def main():
     import socket
     ip_address = socket.gethostbyname(socket.gethostname())
     cq_server.logger.info('bot created, bind success %s', bot.__class__.__name__)
-    cq_server.run(host='198.13.51.156', port=8080, debug=False)
+    cq_server.run(host=ip_address, port=8080, debug=False)
     
 if __name__ == '__main__':
     main()
