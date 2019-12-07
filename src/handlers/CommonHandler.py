@@ -4,13 +4,12 @@ from collections import defaultdict
 
 import const
 import Handler
-import ImageProcesser
 import States
 from const import Emojis, Images
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 from Subscribes import Any, Group, Nany, Private
-from BestdoriAssets import card, event, gacha
-from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
+
+from OperationManager import OperationManager
 
 class GroupChatState(States.BaseState):
     def __init__(self, hdlr, gid=None):
@@ -36,7 +35,7 @@ class GroupChatState(States.BaseState):
         }
         self.kkr_images = [n for n in os.listdir(os.path.join(const.datapath, 'image', 'kkr')) if os.path.isfile(os.path.join(const.datapath, 'image', 'kkr', n))]
         [self.kkr_images.remove(word) for word in ['welcome', 'tql', 'lulao']]
-        self.operator = self.hdlr.bot.operator
+        self.operator = OperationManager(self.hdlr.bot.logger, self.preset_keywords)
     
     async def on_chat(self, context):
         if await self.fixed_reply(context):

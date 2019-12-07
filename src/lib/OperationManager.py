@@ -16,18 +16,34 @@ from Subscribes import Any, Group, Nany, Private
 from BestdoriAssets import card, event, gacha
 from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
 
-class OperationManager:
-    def __init__(self, logger):
-        if os.access(os.path.join(const.user_profile_path, 'user_profile.json'), os.R_OK):
-            with open(os.path.join(const.user_profile_path, 'user_profile.json'), 'r', encoding='utf-8') as f:
-                self.user_profile = defaultdict(dict)
-                self.user_profile.update(json.load(f))
-        else:
-            self.user_profile = defaultdict(dict)
-            self.user_profile.update({str(qq_id): {'authority': 'admin'} for qq_id in [444351271, 365181628]})
+if os.access(os.path.join(const.user_profile_path, 'user_profile.json'), os.R_OK):
+    with open(os.path.join(const.user_profile_path, 'user_profile.json'), 'r', encoding='utf-8') as f:
+        user_profile = defaultdict(dict)
+        user_profile.update(json.load(f))
+else:
+    user_profile = defaultdict(dict)
+    user_profile.update({str(qq_id): {'authority': 'admin'} for qq_id in [444351271, 365181628]})
 
+class OperationManager:
+    def __init__(self, logger, preset_keywords={}):
         self.bilibili_drawcard_spider = Bilibili_DrawCard_Spider()
         self.logger = logger
+        self.preset_keywords = preset_keywords or {
+            '粉键': 'pink_note',
+            'gkd': 'gkd',
+            '沉船': 'stop',
+            '氪': ['stop', 'starstone'],
+            '太强了': 'tql',
+            '太强啦': 'tql',
+            'tql': 'tql',
+            '憨批': ['hanpi1', 'hanpi2', 'hanpi3'],
+            '牛逼': 'nb',
+            'nb': 'nb',
+            '去世': 'tuxie',
+            '吐血': 'tuxie',
+            '震撼': 'surprise',
+            '想要': 'want',
+        }
 
     async def query_card(self, send_handler, msg, receiver_id):   # send_handler: Bot send handler
         res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg.strip())
@@ -50,7 +66,7 @@ class OperationManager:
                 if file_path:
                     await send_handler(receiver_id, ImageMsg({'file': file_path}))
             else:
-                await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
+                await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
         
         res = re.search(r'^查卡(\d+)(\s+(特训前|特训后))?$', msg.strip())
@@ -67,7 +83,7 @@ class OperationManager:
                 if file_path:
                     await send_handler(receiver_id, MultiMsg([ImageMsg({'file': file_path}), StringMsg(description)]))
             else:
-                await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
+                await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
         
         constraints = card._parse_query_command(msg.strip())
@@ -107,7 +123,7 @@ class OperationManager:
             if detail is not None:
                 await send_handler(receiver_id, MultiMsg(detail))
             else:
-                await send_handler(receiver_id, MultiMsg([StringMsg('没有这个活动'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
+                await send_handler(receiver_id, MultiMsg([StringMsg('没有这个活动'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
         
         constraints = event._parse_query_command(msg.strip())
@@ -139,7 +155,7 @@ class OperationManager:
             if detail is not None:
                 await send_handler(receiver_id, MultiMsg(detail))
             else:
-                await send_handler(receiver_id, MultiMsg([StringMsg('没有这个卡池'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
+                await send_handler(receiver_id, MultiMsg([StringMsg('没有这个卡池'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
         
         constraints = gacha._parse_query_command(msg.strip())
@@ -200,7 +216,7 @@ class OperationManager:
                 return False
             
             if not ret:
-                await send_handler(receiver_id, MultiMsg([ImageMsg({'file':f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'}), StringMsg('没出货查什么查')]))
+                await send_handler(receiver_id, MultiMsg([ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('没出货查什么查')]))
                 return True
 
             images = []
@@ -296,7 +312,7 @@ class OperationManager:
                 await send_handler(receiver_id, MultiMsg([ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('哈哈，没车')]))
             return True
         else:
-            if submit_permission or self.user_profile[str(sender_id)].get('authority') == 'admin':
+            if submit_permission or user_profile[str(sender_id)].get('authority') == 'admin':
                 res = re.search(r'^([0-9]{5,6})(\s+.+)*(\s+[Qq][0-4])(\s+.+)*$', msg.strip())
                 if res:
                     room_code = res.group(1)
@@ -324,10 +340,10 @@ class OperationManager:
         back_num = int(back_num[0]) if back_num else None
         if back_num and back_num in ImageProcesser.CUR_BACK_PIC_SET:
             self.logger.info(f'{sender_id} change back {back_num} success')
-            self.user_profile[sender_id]['cur_back_pic'] = int(back_num)
+            user_profile[sender_id]['cur_back_pic'] = int(back_num)
             await send_handler(receiver_id, StringMsg('已修改'))
             with open(os.path.join(const.user_profile_path, 'user_profile.json'), 'w', encoding='utf-8') as f:
-                json.dump(self.user_profile, f, ensure_ascii=False)
+                json.dump(user_profile, f, ensure_ascii=False)
             return True
 
     async def handle_jpg(self, send_handler, msg, receiver_id, sender_id, logger=None):
@@ -335,6 +351,6 @@ class OperationManager:
         if not msg.endswith('.jpg') or '[' in msg:
             return False
         msg = msg[:-4]
-        file_name = ImageProcesser.image_merge(self.user_profile[sender_id].get('cur_back_pic', 31), msg)
+        file_name = ImageProcesser.image_merge(user_profile[sender_id].get('cur_back_pic', 31), msg)
         await send_handler(receiver_id, ImageMsg({'file': file_name}))
         return True
