@@ -8,7 +8,7 @@ from crawler.connection import event_gacha
 parser = argparse.ArgumentParser(description='crawler for Bestdori assets')
 parser.add_argument('operation', type=str, help='init or update')
 parser.add_argument('-c', '--content', type=str, help='card, event or gacha', nargs='*')
-parser.add_argument('-d', '--datapath', type=str, help='static resource path', nargs='*', default=os.path.abspath('../cq/data/'))
+parser.add_argument('-d', '--datapath', type=str, help='static resource path', nargs='*', default=os.path.abspath('../../cq/data/image/assets/'))
 
 if __name__ == '__main__':
     args = parser.parse_args()

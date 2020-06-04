@@ -320,3 +320,20 @@ def manual():
         line_pos += sz[1] + row_space
     image.save(os.path.join(const.datapath, 'image', fn))
     return fn
+
+def compress(infile, mb=150, step=10, quality=80):
+    absinfile = os.path.join(const.datapath, 'image', infile)
+    o_size = os.path.getsize(absinfile) / 1024
+    if o_size <= mb:
+        return infile
+    outfile = infile[:infile.rfind('.')] + '-c.jpg'
+    absoutfile = os.path.join(const.datapath, 'image', outfile)
+    while o_size > mb:
+        im = Image.open(absinfile)
+        im = im.convert('RGB')
+        im.save(absoutfile, quality=quality)
+        if quality - step < 0:
+            break
+        quality -= step
+        o_size = os.path.getsize(absoutfile) / 1024
+    return outfile

@@ -8,7 +8,9 @@ from handlers.CommonHandler import CommonGroupHandler, GroupChatState
 class EasyGroupHandler(CommonGroupHandler):
     def __init__(self, bot, gid):
         super().__init__(bot, gid)
-        self.state = EasyGroupChatState(self, gid)
+        self.state = {
+            'chat': EasyGroupChatState(self, gid),
+        }
 
 class EasyGroupChatState(GroupChatState):
     def __init__(self, hdlr, gid=None):

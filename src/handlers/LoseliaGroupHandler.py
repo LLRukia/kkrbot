@@ -9,8 +9,10 @@ from string import Template
 class LoseliaGroupHandler(CommonGroupHandler):
     def __init__(self, bot, gid):
         super().__init__(bot, gid)
-        self.state = LoseliaGroupChatState(self, gid)
-        
+        self.state = {
+            'chat': LoseliaGroupChatState(self, gid)
+        }
+
 
 class LoseliaGroupChatState(GroupChatState):
     def __init__(self, hdlr, gid=None):
@@ -22,11 +24,11 @@ class LoseliaGroupChatState(GroupChatState):
                 Template('${nn}哭哭'),
                 Template('${nn}摘星了吗'),
                 Template('${nn}今年几岁'),
-            ], 'prob': 0.04},
+            ], 'prob': 0.02},
             272001610: {'nn': ['露佬'], 'tpl': [Template('${nn}放屁'), Template('${nn}唱歌')], 'prob': 0.04},
             510553691: {'nn': ['秃哥'], 'tpl': [Template('${nn}上班了吗'), Template('${nn}下班了吗')], 'prob': 0.02},
             839867673: {'nn': ['汐酱'], 'tpl': [Template('${nn}凶凶QAQ')], 'prob': 0.01},
-            921255023: {'nn': ['ru佬'], 'tpl': [Template('${nn}单手p歌')], 'prob': 0.02},
+            921255023: {'nn': ['ru佬'], 'tpl': [Template('${nn}单手p歌'), Template('${nn}太强啦')], 'prob': 0.02},
             1762262568: {'nn': ['紫苑神仙'], 'tpl': [Template('${nn}出勤了吗')], 'prob': 0.02},
             1589443608: {'nn': ['r佬'], 'tpl': [Template('${nn}摘星了吗')], 'prob': 0.02},
             137127931: {'nn': ['喵喵'], 'tpl': [Template('${nn}快一键变蠢')], 'prob': 0.02},
@@ -42,6 +44,12 @@ class LoseliaGroupChatState(GroupChatState):
                 Template('${nn}凶凶QAQ'),
                 Template('${nn}贴贴露佬了吗'),
             ], 'prob': 0.04},
+            3521953035: {'nn': ['屁股肉大师', '栗子'], 'tpl': [
+                Template('${nn}屁股了吗'),
+                Template('${nn}怎么还不学习'),
+            ], 'prob': 0.03},
+            752277065: {'nn': ['千朝'], 'tpl': [Template('${nn}快更专栏')], 'prob': 0.02},
+            2308860434: {'nn': ['秃哥粉丝'], 'tpl': [Template('${nn}迫害秃哥了吗')], 'prob': 0.02},
         }
         self.COUNT_PERIOD = 60
         self.prob_decay = 1
@@ -97,9 +105,9 @@ class LoseliaGroupChatState(GroupChatState):
         if ('白给' in msg or '差点' in msg) and random.randint(0, 1) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_give.jpg'}))
             return True
-        # if ('妹子' in msg or '女人' in msg or '女的' in msg) and random.randint(0, 1) == 1:
-        #    await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_girl.jpg'}))
-        #    return True
+        if ('妹子' in msg or '女人' in msg or '女的' in msg) and random.randint(0, 3) == 1:
+           await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_girl.jpg'}))
+           return True
         if ('gay' in msg or '基友' in msg or '搞基' in msg) and random.randint(0, 1) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_gay.jpg'}))
             return True

@@ -29,7 +29,7 @@ class CommonBot(Bot):
         self.add_handler(EasyGroupHandler(self, [Groups.ZOO, Groups.YISHANYISHAN]))
         self.add_repeat_timer(30*60, self.operator.bilibili_drawcard_spider.fetch_once, False)
         self.begin()
-
+    
     async def get_status(self):
         self.logger.info('get_status')
         info = await self.server.get_status()

@@ -15,6 +15,9 @@ from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 from Subscribes import Any, Group, Nany, Private
 from BestdoriAssets import card, event, gacha
 from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
+bds = Bilibili_DrawCard_Spider()
+
+COMPRESS_IMAGE = True
 
 if os.access(os.path.join(const.user_profile_path, 'user_profile.json'), os.R_OK):
     with open(os.path.join(const.user_profile_path, 'user_profile.json'), 'r', encoding='utf-8') as f:
@@ -26,7 +29,7 @@ else:
 
 class OperationManager:
     def __init__(self, logger, preset_keywords={}):
-        self.bilibili_drawcard_spider = Bilibili_DrawCard_Spider()
+        self.bilibili_drawcard_spider = bds
         self.logger = logger
         self.preset_keywords = preset_keywords or {
             '粉键': 'pink_note',
@@ -64,6 +67,10 @@ class OperationManager:
                     if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK) \
                     else ''
                 if file_path:
+                    global COMPRESS_IMAGE
+                    if COMPRESS_IMAGE:
+                        file_path = ImageProcesser.compress(file_path, 600)
+
                     await send_handler(receiver_id, ImageMsg({'file': file_path}))
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
@@ -81,6 +88,8 @@ class OperationManager:
                     file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=False) \
                             or ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
                 if file_path:
+                    if COMPRESS_IMAGE:
+                        file_path = ImageProcesser.compress(file_path, 600)
                     await send_handler(receiver_id, MultiMsg([ImageMsg({'file': file_path}), StringMsg(description)]))
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
@@ -222,7 +231,7 @@ class OperationManager:
             images = []
             texts = []
             stringmsg = []
-            self.logger.info(f'gacha result {ret}')
+            # self.logger.info(f'gacha result {ret}')
             too_large = False
             if len(ret) > 50:
                 ret = ret[:50]

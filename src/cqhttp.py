@@ -55,7 +55,10 @@ def main():
     cq_server.logger.setLevel(logging.INFO)
     cq_server.logger.info('begin create bot')
 
-    bot = create_bot(cq_server)
+    try:
+        bot = create_bot(cq_server)
+    except Exception as e:
+        cq_server.logger.info('Exception %s', e)
     if not bot:
         return
     import socket

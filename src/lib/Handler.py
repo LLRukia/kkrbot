@@ -9,7 +9,9 @@ class Handler:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.subscribes = set()
-        self.state = NonState
+        self.state = {
+            None: NonState
+        }
 
     def __del__(self):
         self._on_destroy()
@@ -24,3 +26,6 @@ class Handler:
     def unsubscribe(self, subs_type: Union[Any, Nany]):
         self.subscribes.discard(subs_type)
         self.bot._handler_unsubscribe(self, subs_type)
+    
+    def on_state_changed(self, new):
+        self.state[new].enter()
