@@ -74,7 +74,12 @@ class CommonBot(Bot):
         uid = context['user_id']
         sub_type = context['sub_type']
         if uid == 444351271:
-            await self.send_private_msg(444351271, context)
+            context['user_id'] = 155200142
+            await self.server.send(context, message=context['message'])
+            return
+        if uid == 155200142:
+            context['user_id'] = 444351271
+            await self.server.send(context, message=context['message'])
         if sub_type in ['friend', 'group']:
             if await self.operator.fixed_reply(self.send_private_msg, msg, uid):
                 self.logger.info('query manual successful')
