@@ -73,6 +73,8 @@ class CommonBot(Bot):
         msg = context['raw_message'].strip()
         uid = context['user_id']
         sub_type = context['sub_type']
+        if uid == 444351271:
+            await self.send_private_msg(444351271, context)
         if sub_type in ['friend', 'group']:
             if await self.operator.fixed_reply(self.send_private_msg, msg, uid):
                 self.logger.info('query manual successful')
@@ -97,19 +99,18 @@ class CommonBot(Bot):
                 return
             if await self.operator.fixed_roomcode_reply(self.send_private_msg, msg, uid, uid, logger=self.logger):
                 return
-        
+
         self.logger.info('on_private_message %s', context)
-        if context['user_id'] not in [444351271, 365181628]: return {}
-        if context['raw_message'].strip().startswith('/'):
-            s = context['raw_message'][1:]
-            try:
-                d = json.loads(s)
-            except:
-                self.logger.error('exec command failed, %s', s)
-            command = d['command']
+        # if context['raw_message'].strip().startswith('/'):
+        #     s = context['raw_message'][1:]
+        #     try:
+        #         d = json.loads(s)
+        #     except:
+        #         self.logger.error('exec command failed, %s', s)
+        #     command = d['command']
             
-            f = getattr(self, command)
-            f and callable(f) and await f(context, d)
+        #     f = getattr(self, command)
+        #     f and callable(f) and await f(context, d)
         
         return {}
 
