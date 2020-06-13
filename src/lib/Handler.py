@@ -29,3 +29,6 @@ class Handler:
     
     def on_state_changed(self, new):
         self.state[new].enter()
+    
+    def lazy_init(self):
+        pass

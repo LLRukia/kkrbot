@@ -321,13 +321,25 @@ def manual():
     image.save(os.path.join(const.datapath, 'image', fn))
     return fn
 
-def compress(infile, mb=150, step=10, quality=80):
-    absinfile = os.path.join(const.datapath, 'image', infile)
+def compress(infile, mb=None, step=10, quality=80, isabs=False):
+    if not isabs:
+        absinfile = os.path.join(const.datapath, 'image', infile)
+    else:
+        absinfile = infile
+    outfile = infile[infile.rfind('/') + 1:infile.rfind('.')] + '-c.jpg'
+    absoutfile = os.path.join(const.datapath, 'image', outfile)
+    if os.path.exists(absoutfile):
+        return outfile
+    if mb is None:
+        im = Image.open(absinfile)
+        im = im.convert('RGB')
+        im.save(absoutfile, quality=quality)
+        return outfile
+
     o_size = os.path.getsize(absinfile) / 1024
     if o_size <= mb:
         return infile
-    outfile = infile[:infile.rfind('.')] + '-c.jpg'
-    absoutfile = os.path.join(const.datapath, 'image', outfile)
+    
     while o_size > mb:
         im = Image.open(absinfile)
         im = im.convert('RGB')

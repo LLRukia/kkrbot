@@ -1,20 +1,23 @@
-import os
-import re
-import random
-from collections import defaultdict
 import json
+import os
+import random
+import re
 import time
+from collections import defaultdict
+
 import requests
 
 import const
 import Handler
 import ImageProcesser
 import States
-from const import Emojis, Images
-from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
-from Subscribes import Any, Group, Nany, Private
 from BestdoriAssets import card, event, gacha
 from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
+from const import Emojis, Images
+from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, RecordMsg, StringMsg
+from Subscribes import Any, Group, Nany, Private
+from pixiv_crawler import PixivCursor
+
 bds = Bilibili_DrawCard_Spider()
 
 COMPRESS_IMAGE = True
@@ -28,9 +31,11 @@ else:
     user_profile.update({str(qq_id): {'authority': 'admin'} for qq_id in [444351271, 365181628]})
 
 class OperationManager:
-    def __init__(self, logger, preset_keywords={}):
+
+    def __init__(self, bot, preset_keywords={}):
         self.bilibili_drawcard_spider = bds
-        self.logger = logger
+        self.logger = bot.logger
+        self.bot = bot
         self.preset_keywords = preset_keywords or {
             '粉键': 'pink_note',
             'gkd': 'gkd',
@@ -47,6 +52,34 @@ class OperationManager:
             '震撼': 'surprise',
             '想要': 'want',
         }
+
+    async def query_pixiv(self, send_handler, msg, receiver_id):
+        res = re.search(r'^看看(色|妹子|帅)?图$', msg.strip())
+        if res:
+            file_path = ''
+            if res.group(1) == '帅':
+                file_path = PixivCursor.get_one({'mode': 'female'})
+            elif res.group(1) == '妹子':
+                file_path = PixivCursor.get_one({'mode': 'male'})
+            else:
+                file_path = PixivCursor.get_one({'mode': 'daily'})
+            
+            global COMPRESS_IMAGE
+            if isinstance(file_path, list):
+                if file_path:
+                    for file in file_path:
+                        if COMPRESS_IMAGE:
+                            f = ImageProcesser.compress(os.path.join('/root/pixiv/', file), isabs=True)
+                        await send_handler(receiver_id, ImageMsg({'file': f}))
+                    return True
+            elif file_path:
+                if COMPRESS_IMAGE:
+                    file_path = ImageProcesser.compress(os.path.join('/root/pixiv/', file_path), isabs=True)
+                await send_handler(receiver_id, ImageMsg({'file': file_path}))
+                return True
+            await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
+            return True
+        return False
 
     async def query_card(self, send_handler, msg, receiver_id):   # send_handler: Bot send handler
         res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg.strip())
@@ -334,6 +367,9 @@ class OperationManager:
         return False
 
     async def fixed_reply(self, send_handler, msg, receiver_id, logger=None):
+        be_at = False
+        if '[CQ:at,qq=2807901929]' in msg:
+            be_at = True
         if msg == '使用说明':
             await send_handler(receiver_id, ImageMsg({'file': ImageProcesser.manual()}))
             return True
@@ -341,6 +377,38 @@ class OperationManager:
             file_name = ImageProcesser.get_back_pics()
             await send_handler(receiver_id, ImageMsg({'file': file_name}))
             return True
+        if be_at:
+            m = re.compile(r'^(我){0,1}.*?([日草操]|cao|ri).*?([你]|kkr|kokoro){0,1}(.*)$').findall(msg.strip().lower())
+            self.logger.info('be_at %s', m)
+            if m:
+                m = m[0]
+                verb = m[1]
+                obj = m[2]
+                subj = m[0]
+                obj2 = m[3]
+                if not subj:
+                    subj = 'kkr也'
+                if obj in ['kkr', 'kokoro']:
+                    subj = obj
+                    obj = '你'
+                final_s = f'{subj}{verb}{obj}{obj2}'
+                fn = ImageProcesser.image_merge(47, final_s)
+                await send_handler(receiver_id, ImageMsg({'file': fn}))
+            else:
+                file_path = PixivCursor.get_one({'mode': 'kkr'})
+                global COMPRESS_IMAGE
+                if isinstance(file_path, list):
+                    if file_path:
+                        for file in file_path:
+                            if COMPRESS_IMAGE:
+                                f = ImageProcesser.compress(os.path.join('/root/pixiv/', file), isabs=True)
+                            await send_handler(receiver_id, ImageMsg({'file': f}))
+                        return True
+                else:
+                    if COMPRESS_IMAGE:
+                        file_path = ImageProcesser.compress(os.path.join('/root/pixiv/', file_path), isabs=True)
+                    await send_handler(receiver_id, ImageMsg({'file': file_path}))
+                    return True
         return False
 
     async def change_back_jpg(self, send_handler, msg, receiver_id, sender_id, logger=None):

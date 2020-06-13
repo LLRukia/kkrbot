@@ -64,6 +64,9 @@ class LoseliaGroupChatState(GroupChatState):
         if await self.fixed_roomcode_reply(context):
             return
         
+        if await self.query_pixiv(context):
+            return
+
         if await self.query_user_gacha(context):
             return
 
@@ -97,22 +100,22 @@ class LoseliaGroupChatState(GroupChatState):
             await self.hdlr.bot.send_group_msg(gid, StringMsg(s.substitute(nn=nn)))
             return True
         if ('屁话' in msg or '人话' in msg or '放屁' in msg or '狗话' in msg) and random.randint(0, 1) == 1:
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'll_fangpi{random.choice(["","1"])}.png'}))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'snapshot/ll_fangpi{random.choice(["","1"])}.png'}))
             return True
         if '撸' in msg and random.randint(0, 7) == 1:
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_love.jpg'}))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_love.jpg'}))
             return True
         if ('白给' in msg or '差点' in msg) and random.randint(0, 1) == 1:
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_give.jpg'}))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_give.jpg'}))
             return True
         if ('妹子' in msg or '女人' in msg or '女的' in msg) and random.randint(0, 3) == 1:
-           await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'ll_girl.jpg'}))
+           await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'snapshot/ll_girl.jpg'}))
            return True
         if ('gay' in msg or '基友' in msg or '搞基' in msg) and random.randint(0, 1) == 1:
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_gay.jpg'}))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_gay.jpg'}))
             return True
         if ('自虐' in msg or 'SM' in msg.upper()) and random.randint(0, 1) == 1:
-            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'll_sm.jpg'}))
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_sm.jpg'}))
             return True
         if '草' in msg and random.randint(0, 10) == 1:
             await self.hdlr.bot.send_group_msg(gid, StringMsg('草'))

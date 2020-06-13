@@ -1,20 +1,18 @@
 
 import os, argparse
 from aiocqhttp import CQHttp
+import asyncio
 
 parser = argparse.ArgumentParser(description='cqbot')
 parser.add_argument('-d', '--datapath', type=str, help='static resource path', nargs='*', default=os.path.abspath('../cq/data/'))
 
 def create_bot(server, bot_type='Common'):
     bot = None
-    try:
-        m = __import__(bot_type + 'Bot', fromlist=[''])
-        for n in dir(m):
-            a = getattr(m, n)
-            if isinstance(a, type) and a.__name__ == bot_type + 'Bot':
-                bot = a(server)
-    except ImportError:
-        server.logger.error('Cannot Import Bottype %s', bot_type)
+    m = __import__(bot_type + 'Bot', fromlist=[''])
+    for n in dir(m):
+        a = getattr(m, n)
+        if isinstance(a, type) and a.__name__ == bot_type + 'Bot':
+            bot = a(server)
     return bot
 
 def main():
@@ -53,18 +51,25 @@ def main():
     cq_server.logger.removeHandler(default_handler)
     cq_server.logger.addHandler(logger_handler)
     cq_server.logger.setLevel(logging.INFO)
+    cq_server.logger.info(f'datapath = {const.datapath}')
     cq_server.logger.info('begin create bot')
 
-    try:
-        bot = create_bot(cq_server)
-    except Exception as e:
-        cq_server.logger.info('Exception %s', e)
+
+    def handle_trace(*exc_info):
+        import traceback
+        text = "".join(traceback.format_exception(*exc_info))
+        cq_server.logging.error("Unhandled exception: %s", text)
+
+    sys.excepthook = handle_trace
+
+    bot = create_bot(cq_server)
     if not bot:
         return
     import socket
     ip_address = socket.gethostbyname(socket.gethostname())
     cq_server.logger.info('bot created, bind success %s', bot.__class__.__name__)
     cq_server.run(host=ip_address, port=8080, debug=False)
+    
     
 if __name__ == '__main__':
     main()

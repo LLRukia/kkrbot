@@ -48,7 +48,6 @@ class Bilibili_DrawCard_Spider:
         self._data = {i for i in self._data if ((time.time() - (i.gacha_at // 1000)) < (30 * 24* 3600))}
 
     def _save_data(self, filename, data):
-        return
         try:
             tempname = filename + '.tmp'
             with open(tempname, 'wb') as f:

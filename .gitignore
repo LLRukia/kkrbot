@@ -3,3 +3,5 @@
 *.log
 *.pyc
 *.code-workspace
+data/
+cache/

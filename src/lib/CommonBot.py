@@ -22,14 +22,24 @@ class CommonBot(Bot):
 
     def __init__(self, server):
         super().__init__(server)
-        # self.add_timer(5, self.get_status)
-        # self.add_repeat_timer(60*30, self.get_status)
-        self.operator = OperationManager(self.logger)
+        self.operator = OperationManager(self)
         self.add_handler(LoseliaGroupHandler(self, [Groups.LU]))
         self.add_handler(EasyGroupHandler(self, [Groups.ZOO, Groups.YISHANYISHAN]))
-        self.add_repeat_timer(30*60, self.operator.bilibili_drawcard_spider.fetch_once, False)
         self.begin()
-    
+        self._inited = False
+
+    def lazy_init(self):
+        self._inited = True
+        self.add_repeat_timer(30*60, self.operator.bilibili_drawcard_spider.fetch_once, False)
+        for hdlr in self.handlers:
+            hdlr.lazy_init()
+
+    def begin(self):
+        super().begin()
+        self.logger.info('begin')
+        # self.add_timer(5, self.get_status)
+        # self.add_repeat_timer(60*30, self.get_status)
+
     async def get_status(self):
         self.logger.info('get_status')
         info = await self.server.get_status()
@@ -41,10 +51,7 @@ class CommonBot(Bot):
         for hdlr in self.handlers:
             for substype, callback in self._handler_callbacks[hdlr].items():
                 if substype.on_group_increase(context):
-                    try:
-                        callback and await callback(context)
-                    except Exception as e:
-                        self.logger.error('on_group_increase, callback error, %s', e)
+                    callback and await callback(context)
         return {}
 
     async def on_group_decrease(self, context):
@@ -52,35 +59,32 @@ class CommonBot(Bot):
         for hdlr in self.handlers:
             for substype, callback in self._handler_callbacks[hdlr].items():
                 if substype.on_group_decrease(context):
-                    try:
-                        callback and await callback(context)
-                    except Exception as e:
-                        self.logger.error('on_group_decrease, callback error, %s', e)
+                    callback and await callback(context)
         return {}
 
     async def on_group_message(self, context):
+        if not self._inited:
+            self.lazy_init()
         self.server.logger.info('on_group_message %s', context)
         for hdlr in self.handlers:
             for substype, callback in self._handler_callbacks[hdlr].items():
                 if substype.on_group_message(context):
-                    try:
-                        callback and await callback(context)
-                    except Exception as e:
-                        self.logger.error('on_group_message, callback error, %s', e)
+                    callback and await callback(context)
         return {}
 
     async def on_private_message(self, context):
-        msg = context['raw_message'].strip()
-        uid = context['user_id']
+        if not self._inited:
+            self.lazy_init()
+        self.logger.info('on_private_message %s', context)
         sub_type = context['sub_type']
-        if uid == 444351271:
-            context['user_id'] = 155200142
-            await self.server.send(context, message=context['message'])
-            return
-        if uid == 155200142:
-            context['user_id'] = 444351271
-            await self.server.send(context, message=context['message'])
-        if sub_type in ['friend', 'group']:
+        if sub_type in ['friend']:
+            for hdlr in self.handlers:
+                for substype, callback in self._handler_callbacks[hdlr].items():
+                    if substype.on_private_message(context):
+                        callback and await callback(context)
+        elif sub_type in ['group']:
+            msg = context['raw_message'].strip()
+            uid = context['user_id']
             if await self.operator.fixed_reply(self.send_private_msg, msg, uid):
                 self.logger.info('query manual successful')
                 return
@@ -105,7 +109,6 @@ class CommonBot(Bot):
             if await self.operator.fixed_roomcode_reply(self.send_private_msg, msg, uid, uid, logger=self.logger):
                 return
 
-        self.logger.info('on_private_message %s', context)
         # if context['raw_message'].strip().startswith('/'):
         #     s = context['raw_message'][1:]
         #     try:

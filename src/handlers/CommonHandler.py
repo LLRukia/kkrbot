@@ -13,6 +13,41 @@ from OperationManager import OperationManager
 from Subscribes import Any, Group, Nany, Private
 
 
+class PrivateChatState(States.BaseState):
+    def __init__(self, hdlr, uid=None):
+        super().__init__(hdlr)
+        self.private_subscribe = Private(uid)
+        self.last_message = defaultdict(str)
+        self.operator = hdlr.bot.operator
+
+    async def on_chat(self, context):
+        pass
+
+    async def query_pixiv(self, context):
+        msg = context['raw_message']
+        uid = context['user_id']
+        return await self.operator.query_pixiv(self.hdlr.bot.send_private_msg, msg, uid)
+
+    def enter(self):
+        self.hdlr.bot.logger.info(f'{self.__class__.__name__} entered')
+        self.hdlr.subscribe(self.private_subscribe, self.on_chat)
+
+    def leave(self, target):
+        self.hdlr.ubsubscribe(self.private_subscribe)
+        self.hdlr.on_state_changed(target)
+
+
+class CommonPrivateHandler(Handler.Handler):
+    def __init__(self, bot, uid):
+        super().__init__(bot)
+        self.state = {
+            'chat': PrivateChatState(self, uid),
+        }
+
+    def begin(self):
+        self.state['chat'].enter()
+
+
 class GroupChatState(States.BaseState):
     def __init__(self, hdlr, gid=None):
         super().__init__(hdlr)
@@ -42,7 +77,7 @@ class GroupChatState(States.BaseState):
             const.datapath, 'image', 'kkr')) if os.path.isfile(os.path.join(const.datapath, 'image', 'kkr', n))]
         [self.kkr_images.remove(word) for word in ['welcome', 'tql', 'lulao']]
         self.operator = OperationManager(
-            self.hdlr.bot.logger, self.preset_keywords)
+            self.hdlr.bot, self.preset_keywords)
 
     async def on_chat(self, context):
         if await self.game_judge(context):
@@ -52,6 +87,9 @@ class GroupChatState(States.BaseState):
             return
 
         if await self.fixed_roomcode_reply(context):
+            return
+
+        if await self.query_pixiv(context):
             return
 
         if await self.query_gacha(context):
@@ -74,6 +112,12 @@ class GroupChatState(States.BaseState):
 
         await self.handle_repeat(context)
 
+    async def query_pixiv(self, context):
+        msg = context['raw_message']
+        gid = context['group_id']
+        return await self.operator.query_pixiv(self.hdlr.bot.send_group_msg, msg, gid)
+
+
     async def game_judge(self, context):
         msg = context['raw_message']
         gid = context['group_id']
@@ -85,15 +129,9 @@ class GroupChatState(States.BaseState):
     async def handle_common_chat(self, context):
         msg = context['raw_message']
         gid = context['group_id']
-        be_at = False
-        if '[CQ:at,qq=2807901929]' in msg:
-            be_at = True
         if ('露佬' in msg and '唱歌' in msg):
             if not random.randint(0, 9):
                 await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'auto_reply/xiaoxingxing.silk'}))
-                return True
-            elif be_at:
-                await self.hdlr.bot.send_group_msg(gid, StringMsg('你求我呀'))
                 return True
         for kwd, fn in self.preset_keywords.items():
             if kwd in msg and not random.randint(0, 4):
@@ -102,8 +140,6 @@ class GroupChatState(States.BaseState):
         if not random.randint(0, 9 if ('kkr' in msg.lower() or 'kokoro' in msg.lower()) else 49):
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': f'kkr/{random.choice(self.kkr_images)}'}))
             return True
-        if be_at:
-            await self.hdlr.bot.send_group_msg(gid, MultiMsg([StringMsg('你想干嘛？'), ImageMsg({'file': f'kkr/worinima'})]))
 
     async def handle_repeat(self, context):
         msg = context['raw_message']
