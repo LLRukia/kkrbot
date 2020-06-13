@@ -67,7 +67,7 @@ class OperationManager:
             global COMPRESS_IMAGE
             if isinstance(file_path, list):
                 if file_path:
-                    for file in file_path:
+                    for file in file_path[:3]:
                         if COMPRESS_IMAGE:
                             f = ImageProcesser.compress(os.path.join('/root/pixiv/', file), isabs=True)
                         await send_handler(receiver_id, ImageMsg({'file': f}))
@@ -399,7 +399,7 @@ class OperationManager:
                 global COMPRESS_IMAGE
                 if isinstance(file_path, list):
                     if file_path:
-                        for file in file_path:
+                        for file in file_path[:3]:
                             if COMPRESS_IMAGE:
                                 f = ImageProcesser.compress(os.path.join('/root/pixiv/', file), isabs=True)
                             await send_handler(receiver_id, ImageMsg({'file': f}))

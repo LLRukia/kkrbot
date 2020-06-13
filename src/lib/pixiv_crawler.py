@@ -51,14 +51,14 @@ class PixivCrawler:
         self._wd = work_path
 
     def fetch_work(self, work_id, tag):
-        ret = []
+        got = False
         ri = self._api.works(work_id)
         try:
             r = ri.response[0]
         except:
             r = None
         if not r:
-            return ret
+            return got
         url_list = []
         if r.metadata:
             for p in r.metadata.pages:
@@ -70,28 +70,31 @@ class PixivCrawler:
         wd = os.path.join(self._wd, created_time)
         if not os.path.isdir(wd):
             os.mkdir(wd)
+        fns = []
+        
         for url in url_list:
             fn = os.path.basename(url)
             final_fn = os.path.join(created_time, fn)
             _logger.info('getting %s to %s', url, wd)
             try:
                 if self._api.download(url, fname=fn, path=wd):
+                    got = True
                     shutil.move(os.path.join(wd, fn), os.path.join(wd, fn + '.download'))
-                ret.append(final_fn)
+                fns.append(final_fn)
             except:
                 import sys
                 sys.excepthook(*sys.exc_info())
-        if ret:
+        if fns:
             meta = json.dumps(r)
             dmeta = {
                 'work_id': work_id,
                 'mode': tag,
                 'user': r.user.id,
-                'fn': ret,
+                'fn': fns,
                 'meta': meta,
             }
             PixivCursor.insert_update_one(dmeta)
-        return ret
+        return got
 
     def get_by_tag(self, search_tag='', filter_tag=[], num=30, save_tag=''):
         if not search_tag and not filter_tag:
@@ -105,9 +108,9 @@ class PixivCrawler:
             save_tag = search_tag
         filter_tag = set(filter_tag)
         _logger.info('search: %s filter: %s', search_tag, filter_tag)
-        ret = []
+        ret = 0
         page = 1
-        while len(ret) < num:
+        while ret < num:
             r = self._api.search_works(search_tag, mode='tag', page=page, per_page=30)
             try:
                 l = r.response
@@ -123,16 +126,18 @@ class PixivCrawler:
                 tt = set([x.strip().lower() for x in i.tags])
                 if len(tt & filter_tag) != len(filter_tag):
                     continue
-                ret.extend(self.fetch_work(i.id, save_tag))
-                if len(ret) > num:
+                if self.fetch_work(i.id, save_tag):
+                    ret += 1
+                if ret > num:
                     break
+            page += 1
 
         return ret
 
     def get_rank(self, mode='daily', num=30):
-        ret = []
+        ret = 0
         page = 1
-        while len(ret) < num:
+        while ret < num:
             r = self._api.ranking_all(mode=mode, page=page, per_page=30)
             try:
                 l = r.response[0].works
@@ -144,8 +149,9 @@ class PixivCrawler:
             for i in l:
                 if i.work.type != 'illustration':
                     continue
-                ret.extend(self.fetch_work(i.work.id, mode))
-                if len(ret) > num:
+                if self.fetch_work(i.work.id, mode):
+                    ret += 1
+                if ret >= num:
                     break
             page += 1
         return ret
