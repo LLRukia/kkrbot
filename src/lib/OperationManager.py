@@ -54,15 +54,14 @@ class OperationManager:
         }
 
     async def query_pixiv(self, send_handler, msg, receiver_id):
-        res = re.search(r'^看看(色|妹子|帅)?图$', msg.strip())
+        res = re.search(r'^看看(.*)?图$', msg.strip())
         if res:
-            file_path = ''
-            if res.group(1) == '帅':
-                file_path = PixivCursor.get_one({'mode': 'female'})
-            elif res.group(1) == '妹子':
-                file_path = PixivCursor.get_one({'mode': 'male'})
-            else:
-                file_path = PixivCursor.get_one({'mode': 'daily'})
+            mmap = {
+                '帅': 'female',
+                '妹子': 'male',
+                '露佬': 'kyaru',
+            }
+            file_path = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')})
             
             global COMPRESS_IMAGE
             if isinstance(file_path, list):
