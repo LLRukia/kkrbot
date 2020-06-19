@@ -61,24 +61,28 @@ class OperationManager:
                 '妹子': 'male',
                 '露佬': 'kyaru',
             }
-            file_path = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')})
+            file_path, meta = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')})
             
             global COMPRESS_IMAGE
+            msg = []
             if isinstance(file_path, list):
                 if file_path:
                     for file in file_path[:3]:
                         if COMPRESS_IMAGE:
                             f = ImageProcesser.compress(os.path.join('/root/pixiv/', file), isabs=True)
-                        await send_handler(receiver_id, ImageMsg({'file': f}))
-                    return True
+                        msg.append(ImageMsg({'file': f}))
             elif file_path:
                 if COMPRESS_IMAGE:
                     file_path = ImageProcesser.compress(os.path.join('/root/pixiv/', file_path), isabs=True)
-                await send_handler(receiver_id, ImageMsg({'file': file_path}))
+                msg.append(ImageMsg({'file': file_path}))
+            if msg:
+                msg.insert(0, StringMsg(f'id: {meta['id']}\nauthor: {meta['user']['id']}, {meta['user']['name']}'))
+                await send_handler(receiver_id, MultiMsg(msg))
+            else:
+                await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
                 return True
-            await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
-            return True
-        return False
+        else:
+            return False
 
     async def query_card(self, send_handler, msg, receiver_id):   # send_handler: Bot send handler
         res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg.strip())
@@ -394,7 +398,7 @@ class OperationManager:
                 fn = ImageProcesser.image_merge(47, final_s)
                 await send_handler(receiver_id, ImageMsg({'file': fn}))
             else:
-                file_path = PixivCursor.get_one({'mode': 'kkr'})
+                file_path, meta = PixivCursor.get_one({'mode': 'kkr'})
                 global COMPRESS_IMAGE
                 if isinstance(file_path, list):
                     if file_path:

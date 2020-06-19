@@ -40,7 +40,7 @@ class PixivCursor:
         ret = PixivCursor.ILLUSTS.find_one(query)
         if ret:
             PixivCursor.ILLUSTS.update_one({'_id': ret['_id']}, {'$set': {'used': 1}})
-            return ret['fn']
+            return ret['fn'], json.loads(ret['meta'])
 
 class PixivCrawler:
     KKRTAG = ['弦巻こころ']
