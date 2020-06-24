@@ -61,7 +61,7 @@ class OperationManager:
                 '妹子': 'male',
                 '露佬': 'kyaru',
             }
-            file_path, meta = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')})
+            file_path, meta = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')}, receiver_id)
             
             global COMPRESS_IMAGE
             msg = []
@@ -398,7 +398,7 @@ class OperationManager:
                 fn = ImageProcesser.image_merge(47, final_s)
                 await send_handler(receiver_id, ImageMsg({'file': fn}))
             else:
-                file_path, meta = PixivCursor.get_one({'mode': 'kkr'})
+                file_path, meta = PixivCursor.get_one({'mode': 'kkr'}, receiver_id)
                 global COMPRESS_IMAGE
                 if isinstance(file_path, list):
                     if file_path:

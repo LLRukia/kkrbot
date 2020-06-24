@@ -28,18 +28,21 @@ class PixivCursor:
 
     @staticmethod
     def insert_update_one(meta):
-        meta.update({'used': 0})
+        meta.update({'used': []})
         if PixivCursor.ILLUSTS.find_one({'work_id': meta['work_id']}):
             PixivCursor.ILLUSTS.update_one({'work_id': meta['work_id']}, {'$set': meta})
         else:
             PixivCursor.ILLUSTS.insert_one(meta)
 
     @staticmethod
-    def get_one(query={}):
-        query.update({'used': 0})
+    def get_one(query={}, dirty_flag=None):
+        if dirty_flag is None:
+            query.update({'used': { '$ne': dirty_flag }})
+        else:
+            query.update({'used': { '$size': 0 }})
         ret = PixivCursor.ILLUSTS.find_one(query)
         if ret:
-            PixivCursor.ILLUSTS.update_one({'_id': ret['_id']}, {'$set': {'used': 1}})
+            PixivCursor.ILLUSTS.update_one({'_id': ret['_id']}, {'$push': {'used': dirty_flag}})
             return ret['fn'], json.loads(ret['meta'])
 
 class PixivCrawler:
