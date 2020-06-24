@@ -24,7 +24,7 @@ class CommonBot(Bot):
         super().__init__(server)
         self.operator = OperationManager(self)
         self.add_handler(LoseliaGroupHandler(self, [Groups.LU]))
-        self.add_handler(EasyGroupHandler(self, [Groups.ZOO, Groups.YISHANYISHAN]))
+        self.add_handler(EasyGroupHandler(self, [Groups.LSJJKX]))
         self.begin()
         self._inited = False
 
