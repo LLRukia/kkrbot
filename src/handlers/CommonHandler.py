@@ -23,10 +23,10 @@ class PrivateChatState(States.BaseState):
     async def on_chat(self, context):
         pass
 
-    async def query_pixiv(self, context):
+    async def query_pixiv(self, context, enable_r18=False):
         msg = context['raw_message']
         uid = context['user_id']
-        return await self.operator.query_pixiv(self.hdlr.bot.send_private_msg, msg, uid)
+        return await self.operator.query_pixiv(self.hdlr.bot.send_private_msg, msg, uid, enable_r18)
 
     def enter(self):
         self.hdlr.bot.logger.info(f'{self.__class__.__name__} entered')
@@ -112,10 +112,10 @@ class GroupChatState(States.BaseState):
 
         await self.handle_repeat(context)
 
-    async def query_pixiv(self, context):
+    async def query_pixiv(self, context, enable_r18=False):
         msg = context['raw_message']
         gid = context['group_id']
-        return await self.operator.query_pixiv(self.hdlr.bot.send_group_msg, msg, gid)
+        return await self.operator.query_pixiv(self.hdlr.bot.send_group_msg, msg, gid, enable_r18)
 
 
     async def game_judge(self, context):

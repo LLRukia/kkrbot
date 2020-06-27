@@ -42,7 +42,7 @@ def main():
     if not os.path.exists(const.asset_gacha_path): os.makedirs(const.asset_gacha_path)
     if not os.path.exists(const.asset_resource_path): os.makedirs(const.asset_resource_path)
     
-    logger_handler = logging.FileHandler(os.path.realpath(os.path.join(const.workpath, 'app.log')))
+    logger_handler = logging.FileHandler(os.path.realpath(os.path.join(const.workpath, 'log/app.log')))
     logger_handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
     ))

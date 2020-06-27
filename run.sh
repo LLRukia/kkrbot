@@ -1,3 +1,3 @@
 #!/bin/bash
 
-nohup python3 src/cqhttp.py > app.log 2>&1 &
+nohup python3 src/cqhttp.py > log/app.log 2>&1 &

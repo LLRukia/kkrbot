@@ -91,6 +91,9 @@ class CommonBot(Bot):
             if await self.operator.change_back_jpg(self.send_private_msg, msg, uid, uid, self.logger):
                 self.logger.info('change back jpg successful')
                 return
+            if await self.operator.query_pixiv(self.send_private_msg, msg, uid, True):
+                self.logger.info('query_pixiv successful')
+                return
             if await self.operator.handle_jpg(self.send_private_msg, msg, uid, uid, self.logger):
                 self.logger.info('handle jpg successful')
                 return

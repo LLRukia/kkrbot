@@ -53,7 +53,7 @@ class OperationManager:
             '想要': 'want',
         }
 
-    async def query_pixiv(self, send_handler, msg, receiver_id):
+    async def query_pixiv(self, send_handler, msg, receiver_id, enable_r18=False):
         res = re.search(r'^看看(.*)?图$', msg.strip())
         if res:
             mmap = {
@@ -61,6 +61,8 @@ class OperationManager:
                 '妹子': 'male',
                 '露佬': 'kyaru',
             }
+            if enable_r18:
+                mmap['色'] = 'daily_r18'
             file_path, meta = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')}, receiver_id)
             
             global COMPRESS_IMAGE
@@ -76,7 +78,7 @@ class OperationManager:
                     file_path = ImageProcesser.compress(os.path.join('/root/pixiv/', file_path), isabs=True)
                 msg.append(ImageMsg({'file': file_path}))
             if msg:
-                msg.insert(0, StringMsg(f'id: {meta['id']}\nauthor: {meta['user']['id']}, {meta['user']['name']}'))
+                msg.insert(0, StringMsg(f'id: {meta["id"]}\nauthor: {meta["user"]["id"]}, {meta["user"]["name"]}\n'))
                 await send_handler(receiver_id, MultiMsg(msg))
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
@@ -397,6 +399,7 @@ class OperationManager:
                 final_s = f'{subj}{verb}{obj}{obj2}'
                 fn = ImageProcesser.image_merge(47, final_s)
                 await send_handler(receiver_id, ImageMsg({'file': fn}))
+                return True
             else:
                 file_path, meta = PixivCursor.get_one({'mode': 'kkr'}, receiver_id)
                 global COMPRESS_IMAGE
@@ -408,9 +411,12 @@ class OperationManager:
                             await send_handler(receiver_id, ImageMsg({'file': f}))
                         return True
                 else:
-                    if COMPRESS_IMAGE:
-                        file_path = ImageProcesser.compress(os.path.join('/root/pixiv/', file_path), isabs=True)
-                    await send_handler(receiver_id, ImageMsg({'file': file_path}))
+                    if file_path is None:
+                        await send_handler(receiver_id, MultiMsg([StringMsg('kkr被看光了'), ImageMsg({'file': f'kkr/tuxie'})]))
+                    else:
+                        if COMPRESS_IMAGE:
+                            file_path = ImageProcesser.compress(os.path.join('/root/pixiv/', file_path), isabs=True)
+                        await send_handler(receiver_id, ImageMsg({'file': file_path}))
                     return True
         return False
 
