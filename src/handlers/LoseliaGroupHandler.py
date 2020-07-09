@@ -2,7 +2,7 @@ import random
 from collections import defaultdict
 
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
-from handlers.CommonHandler import CommonGroupHandler, GroupChatState
+from handlers.CommonHandler import CommonGroupHandler, GroupChatState, OneNightState
 from Subscribes import GroupEx
 from string import Template
 
@@ -10,7 +10,8 @@ class LoseliaGroupHandler(CommonGroupHandler):
     def __init__(self, bot, gid):
         super().__init__(bot, gid)
         self.state = {
-            'chat': LoseliaGroupChatState(self, gid)
+            'chat': LoseliaGroupChatState(self, gid),
+            '1night': OneNightState(self, gid),
         }
 
 
@@ -58,6 +59,9 @@ class LoseliaGroupChatState(GroupChatState):
 
     async def on_chat(self, context):
         self.chat_count += 1
+        if await self.game_judge(context):
+            return
+        
         if await self.fixed_reply(context):
             return
 
