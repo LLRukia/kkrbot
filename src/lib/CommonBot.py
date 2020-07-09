@@ -23,8 +23,9 @@ class CommonBot(Bot):
     def __init__(self, server):
         super().__init__(server)
         self.operator = OperationManager(self)
-        self.add_handler(LoseliaGroupHandler(self, [Groups.LU]))
-        self.add_handler(EasyGroupHandler(self, [Groups.LSJJKX]))
+        self.add_handler(LoseliaGroupHandler(self, Groups.LU))
+        self.add_handler(EasyGroupHandler(self, Groups.LSJJKX))
+        self.add_handler(EasyGroupHandler(self, Groups.ZOO))
         self.begin()
         self._inited = False
 
@@ -51,7 +52,7 @@ class CommonBot(Bot):
         for hdlr in self.handlers:
             for substype, callback in self._handler_callbacks[hdlr].items():
                 if substype.on_group_increase(context):
-                    callback and await callback(context)
+                    callback and await callback(context, True)
         return {}
 
     async def on_group_decrease(self, context):
@@ -59,7 +60,7 @@ class CommonBot(Bot):
         for hdlr in self.handlers:
             for substype, callback in self._handler_callbacks[hdlr].items():
                 if substype.on_group_decrease(context):
-                    callback and await callback(context)
+                    callback and await callback(context, False)
         return {}
 
     async def on_group_message(self, context):

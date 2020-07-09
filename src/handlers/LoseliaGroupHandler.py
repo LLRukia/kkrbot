@@ -134,8 +134,11 @@ class LoseliaGroupChatState(GroupChatState):
         await self.hdlr.bot.send_group_msg(gid, StringMsg('别整天复读啦，我要看到露佬smile！'))
         await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'auto_reply/are_you_smiling.mp3'})) 
 
-    async def on_group_increase(self, context):
-        await self.hdlr.bot.send_group_msg(context['group_id'], MultiMsg([StringMsg('欢迎新露佬吹！'), ImageMsg({'file': 'kkr/welcome'})]))
+    async def on_group_changed(self, context, flag):
+        if flag:
+            await self.hdlr.bot.send_group_msg(context['group_id'], MultiMsg([StringMsg('欢迎新露佬吹！'), ImageMsg({'file': 'kkr/welcome'})]))
+        else:
+            await self.hdlr.bot.send_group_msg(context['group_id'], StringMsg('露佬吹又少了一个...哭哭QAQ'))
         return {}
 
     def update_prob_decay(self):
@@ -148,7 +151,7 @@ class LoseliaGroupChatState(GroupChatState):
         self.chat_count = 0
 
     def enter(self):
-        self.hdlr.subscribe(self.group_subscribe_ex, self.on_group_increase)
+        self.hdlr.subscribe(self.group_subscribe_ex, self.on_group_changed)
         super().enter()
     
     def leave(self):
