@@ -282,6 +282,11 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
             self._sub_stage += 1
         if self._sub_stage >= len(OneNightState._FLOW):
             self._stage += 1
+            if self._stage == 2:
+                self.hdlr.bot.add_timer(1, self.on_stage_2_enter)
+
+    async def on_stage_2_enter(self):
+        await self._send_g(MultiMsg([StringMsg('所有人行动完毕，天亮了。现在是自由讨论时间，讨论完毕后，输入"查看结果"以查看游戏结果'), ImageMsg({'file': f'kkr/want'})]))
 
     async def on_chat(self, context):
         self.hdlr.bot.logger.info('OneNightState on_chat %s', context['raw_message'])
@@ -292,6 +297,8 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
                 await self._send_g(StringMsg('再次输入以确认结束'))
                 self._confirm_quit = True
             return
+        elif context['raw_message'] == '说明':
+            await self._send_g(StringMsg(OneNightState._RULE))
         self._confirm_quit = False
         if self._stage == 0:
             await self._on_stage_0(context)
@@ -309,6 +316,12 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
         cur_char = OneNightState._FLOW[self.sub_stage]
         func = getattr(self, '_%s'%(cur_char.lower()))
         await func(context)
+
+    async def _werewolf(self, context, first=None):
+        if first:
+            for p in first:
+                await self._send_p(first, StringMsg('请给我一个你想查验的人的QQ号(查1名场上的玩家)或者2个1~3之间的数字(使用一个空格隔开)(查2张沉底的身份牌)'))
+            return
 
     async def _seer(self, context, first=None):
         if first:
@@ -392,11 +405,13 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
                 await self._send_g(StringMsg('请勿重复加入'))
             else:
                 self.players[uid] = 'default'
+                await self._send_g(StringMsg(f'{uid} 加入成功 现在有{len(self.players)}个玩家'))
         elif msg == '退出':
             if uid not in self.players:
                 await self._send_g(MultiMsg([StringMsg('没加入退个锤子'), ImageMsg({'file': f'kkr/worinima'})]))
             else:
                 self.players.pop(uid)
+                await self._send_g(StringMsg(f'{uid} 退出成功 现在有{len(self.players)}个玩家'))
 
     async def start(self):
         self.pn = len(self.players)
