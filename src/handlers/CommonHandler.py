@@ -215,7 +215,7 @@ class GroupChatState(States.BaseState):
         self.hdlr.subscribe(self.group_subscribe, self.on_chat)
 
     def leave(self, target):
-        self.hdlr.ubsubscribe(self.group_subscribe)
+        self.hdlr.unsubscribe(self.group_subscribe)
         self.hdlr.on_state_changed(target)
 
 

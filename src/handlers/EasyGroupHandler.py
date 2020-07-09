@@ -3,13 +3,14 @@ import random
 from collections import defaultdict
 
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg
-from handlers.CommonHandler import CommonGroupHandler, GroupChatState
+from handlers.CommonHandler import CommonGroupHandler, GroupChatState, OneNightState
 
 class EasyGroupHandler(CommonGroupHandler):
     def __init__(self, bot, gid):
         super().__init__(bot, gid)
         self.state = {
-            'chat': EasyGroupChatState(self, gid),
+            'chat': GroupChatState(self, gid),
+            '1night': OneNightState(self, gid),
         }
 
 class EasyGroupChatState(GroupChatState):
@@ -17,6 +18,9 @@ class EasyGroupChatState(GroupChatState):
         super().__init__(hdlr, gid)
 
     async def on_chat(self, context):
+        if await self.game_judge(context):
+            return
+        
         if await self.fixed_reply(context):
             return
         
