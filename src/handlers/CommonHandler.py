@@ -284,6 +284,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
             self._stage += 1
 
     async def on_chat(self, context):
+        self.hdlr.bot.logger.info('OneNightState on_chat %s', context['raw_message'])
         if context['raw_message'] == '结束':
             if self._confirm_quit:
                 self.leave('chat')
@@ -435,6 +436,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
 
     def enter(self):
         self.reset()
+        self.hdlr.bot.logger.info('OneNightState enter')
         self.hdlr.subscribe(self.group_subscribe, self.on_chat)
 
     def leave(self, target):
