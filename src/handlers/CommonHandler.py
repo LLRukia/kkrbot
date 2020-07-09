@@ -33,7 +33,7 @@ class PrivateChatState(States.BaseState):
         self.hdlr.subscribe(self.private_subscribe, self.on_chat)
 
     def leave(self, target):
-        self.hdlr.ubsubscribe(self.private_subscribe)
+        self.hdlr.unsubscribe(self.private_subscribe)
         self.hdlr.on_state_changed(target)
 
 
@@ -456,8 +456,8 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
 
     def leave(self, target):
         if self.private_subscribe:
-            self.hdlr.ubsubscribe(self.private_subscribe)
-        self.hdlr.ubsubscribe(self.group_subscribe)
+            self.hdlr.unsubscribe(self.private_subscribe)
+        self.hdlr.unsubscribe(self.group_subscribe)
         self.hdlr.on_state_changed(target)
 
 

@@ -155,5 +155,5 @@ class LoseliaGroupChatState(GroupChatState):
         super().enter()
     
     def leave(self):
-        self.hdlr.ubsubscribe(self.group_subscribe_ex)
+        self.hdlr.unsubscribe(self.group_subscribe_ex)
         super().leave()
