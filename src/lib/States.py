@@ -5,7 +5,7 @@ class BaseState:
     def enter(self):
         raise RuntimeError('Not implement')
 
-    def leave(self):
+    def leave(self, target):
         raise RuntimeError('Not implement')
 
 
@@ -16,5 +16,5 @@ class NonState(BaseState):
     def enter(self):
         pass
     
-    def leave(self):
+    def leave(self, target):
         pass
