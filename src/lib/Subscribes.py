@@ -36,11 +36,11 @@ class Group(Nany):
 
 class Private(Nany):
     __slots__ = ['uid']
-    def __init__(self, uid: int):
+    def __init__(self, uid: list=[]):
         self.uid = uid
 
     def on_private_message(self, context):
-        return context['user_id'] == self.uid if self.uid else True
+        return context['user_id'] in self.uid if self.uid else True
 
 class GroupEx(Nany):
     __slots__ = ['gid']

@@ -289,7 +289,6 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
         await self._send_g(MultiMsg([StringMsg('所有人行动完毕，天亮了。现在是自由讨论时间，讨论完毕后，输入"查看结果"以查看游戏结果'), ImageMsg({'file': f'kkr/want'})]))
 
     async def on_chat(self, context):
-        self.hdlr.bot.logger.info('OneNightState on_chat %s', context['raw_message'])
         if context['raw_message'] == '结束':
             if self._confirm_quit:
                 self.leave('chat')
@@ -319,9 +318,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
 
     async def _werewolf(self, context, first=None):
         if first:
-            for p in first:
-                await self._send_p(first, StringMsg('请给我一个你想查验的人的QQ号(查1名场上的玩家)或者2个1~3之间的数字(使用一个空格隔开)(查2张沉底的身份牌)'))
-            return
+            self.sub_stage += 1
 
     async def _seer(self, context, first=None):
         if first:
