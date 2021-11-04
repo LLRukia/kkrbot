@@ -1,4 +1,3 @@
-# author: Rukia
 workpath = ''
 cachepath = ''
 user_profile_path = ''

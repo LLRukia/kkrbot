@@ -12,7 +12,9 @@ CUR_BACK_PIC_SET = set()
 BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT = 140, 130
 BACK_PIC_NUM_EACH_LINE = 5
 
-half_en_len = lambda s: (len(s) + (len(s.encode(encoding='utf-8')) - len(s)) // 2) // 2
+
+def half_en_len(s): return (len(s) + (len(s.encode(encoding='utf-8')) - len(s)) // 2) // 2
+
 
 def image_merge(back_number, s, get_im_obj=False):
     back_number = 'back_%d' % back_number
@@ -26,7 +28,7 @@ def image_merge(back_number, s, get_im_obj=False):
         real_width = max(3, im_src.width // max(6, half_en_len(s)) * 4 // 5)
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
-        im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
+        im = Image.new('RGB', (im_src.width, im_src.height), (255, 255, 255))
         im.paste(im_src)
         text_width = im_src.width
 
@@ -39,7 +41,7 @@ def image_merge(back_number, s, get_im_obj=False):
         real_width = max(3, im_src.width // max(6, half_en_len(s)) * 4 // 5)
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
-        im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
+        im = Image.new('RGB', (im_src.width, im_src.height), (255, 255, 255))
         im.paste(im_src)
         text_width = im_src.width
         draw = ImageDraw.Draw(im)
@@ -51,7 +53,7 @@ def image_merge(back_number, s, get_im_obj=False):
         real_width = max(3, im_src.width // max(6, half_en_len(s)) * 4 // 5)
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
-        im = Image.new('RGB', (im_src.width, im_src.height), (255,255,255))
+        im = Image.new('RGB', (im_src.width, im_src.height), (255, 255, 255))
         im.paste(im_src)
         text_width = im_src.width
 
@@ -64,7 +66,7 @@ def image_merge(back_number, s, get_im_obj=False):
         real_width = max(3, im_src.width // max(6, half_en_len(s)))
         font = ImageFont.truetype(os.path.join(const.workpath, FONT), real_width)
         real_height = real_width + SPACING
-        im = Image.new('RGB', (im_src.width, im_src.height + real_height), (255,255,255))
+        im = Image.new('RGB', (im_src.width, im_src.height + real_height), (255, 255, 255))
         im.paste(im_src)
         text_width = im_src.width
 
@@ -79,31 +81,39 @@ def image_merge(back_number, s, get_im_obj=False):
         im.save(path)
         return f'auto_reply/{back_number}/%s' % filename
 
+
 def get_back_pics():
     return 'auto_reply/back_catalogue.jpg'
 
+
 def init():
     global CUR_BACK_PIC_SET
-    for _, _, files in os.walk(os.path.join(const.workpath, 'cache')):
+    for _, _, files in os.walk(const.cachepath):
         for f in files:
             if f.startswith('back_') and f.endswith('.jpg'):
                 num = int(back_regex.findall(f)[0])
                 CUR_BACK_PIC_SET.add(num)
                 save_path = os.path.join(const.datapath, 'image', 'auto_reply', f'back_{num}')
-                if not os.path.exists(save_path): os.makedirs(save_path)
-    
-    cur_back_pic_nums = len(CUR_BACK_PIC_SET)
+                if not os.path.exists(save_path):
+                    os.makedirs(save_path)
 
-    im = Image.new('RGB', (BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT * (((cur_back_pic_nums - 1) // BACK_PIC_NUM_EACH_LINE) + 1)), (255,255,255))
+    cur_back_pic_nums = len(CUR_BACK_PIC_SET)
+    if cur_back_pic_nums == 0:
+        return
+
+    im = Image.new('RGB', (BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT * (((cur_back_pic_nums - 1) // BACK_PIC_NUM_EACH_LINE) + 1)), (255, 255, 255))
     for i, num in enumerate(CUR_BACK_PIC_SET):
         im_o = image_merge(num, '底图 %d' % num, get_im_obj=True)
         im_o = im_o.resize((BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT))
         box = (i % BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_WIDTH, i // BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_HEIGHT)
         im.paste(im_o, box)
+    if not os.path.exists(os.path.join(const.datapath, 'image/auto_reply')):
+        os.mkdir(os.path.join(const.datapath, 'image/auto_reply'))
     im.save(os.path.join(const.datapath, f'image/auto_reply/back_catalogue.jpg'))
-    
+
 
 init()
+
 
 def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, return_fn=False):
     if thumbnail:
@@ -124,7 +134,7 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, 
                 frame = Image.open(os.path.join(const.asset_resource_path, f'card-1-{attribute}.png'))
             else:
                 frame = Image.open(os.path.join(const.asset_resource_path, f'card-{rarity}.png'))
-            
+
             back_image.paste(frame, (0, 0), mask=frame)
             back_image.paste(band_icon, (0, 0), mask=band_icon)
             back_image.paste(attribute_icon, (180 - 50, 0), mask=attribute_icon)
@@ -142,7 +152,7 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, 
         fn = f'auto_reply/cards/m_{rsn}_{"normal" if not trained else "after_training"}.png'
         if os.access(os.path.join(const.datapath, 'image', fn), os.R_OK):
             return fn
-        
+
         try:
             OUT_WIDTH, OUT_HEIGHT = 1364, 1020
             INNER_WIDTH, INNER_HEIGHT = 1334, 1002
@@ -174,18 +184,20 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, 
             return fn
         except:
             return ''
-        
+
+
 def white_padding(width, height):
     return Image.new('RGB', (width, height), (255, 255, 255))
+
 
 def thumbnail(**options):
     # images: a list of Image objects, or a list of lists(tuples) of Image objects
     # labels: a list of strings shown at the bottom
     # image_style: if not assigned, take the params of the first image; if both assigned, will be forced to resize
-    ##### width: width of each image, if not assigned, will be min(scaled value by height, 180)
-    ##### height: height of each image, if not assigned, will be min(scaled value by width, 180)
+    # width: width of each image, if not assigned, will be min(scaled value by height, 180)
+    # height: height of each image, if not assigned, will be min(scaled value by width, 180)
     # label_style:
-    ##### font_size: font_size of each label
+    # font_size: font_size of each label
     # col_num (images are arranged row by row)
     # col_space: (space between two columns)
     # row_space (space between two rows, if labels exist, it means the space between the label of row1 and the image of row2)
@@ -200,7 +212,7 @@ def thumbnail(**options):
             raise Exception('images must be a list of Image objects, or a list of lists(tuples) of Image objects')
     else:
         images = [[im] for im in images]
-    
+
     if not options.get('image_style'):
         box_width, box_height = first_image.size
     else:
@@ -213,7 +225,7 @@ def thumbnail(**options):
         elif not options['image_style'].get('width') and options['image_style'].get('height'):
             images = [[im.resize((options['image_style']['height'] * im.size[0] // im.size[1], options['image_style']['height'])) for im in im_list] for im_list in images]
             box_width, box_height = max([im.size[0] for im_list in images for im in im_list]), options['image_style']['height']
-    
+
     col_num = options.get('col_num', 4)
     row_num = (len(images) - 1) // col_num + 1
     col_space = options.get('col_space', 0)
@@ -229,9 +241,9 @@ def thumbnail(**options):
             all_chars |= set(label)
         label_height = ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize(''.join(all_chars), font=font)[1]
         box_width = max(box_width * len(images[0]), max_label_width) // len(images[0])
-    
+
         back_image = Image.new('RGB', (
-            col_num * len(images[0]) * box_width + (col_num - 1) * col_space, 
+            col_num * len(images[0]) * box_width + (col_num - 1) * col_space,
             (box_height + label_height) * row_num + row_num * row_space,
         ), (255, 255, 255))
 
@@ -253,7 +265,7 @@ def thumbnail(**options):
                 ), labels[r * col_num + c], fill=(0, 0, 0), font=font)
     else:
         back_image = Image.new('RGB', (
-            col_num * len(images[0]) * box_width + (col_num - 1) * col_space, 
+            col_num * len(images[0]) * box_width + (col_num - 1) * col_space,
             box_height * row_num + (row_num - 1) * row_space
         ), (255, 255, 255))
 
@@ -273,6 +285,7 @@ def thumbnail(**options):
     back_image.save(os.path.join(const.datapath, 'image', fn))
     return fn
 
+
 def open_nontransparent(filename):
     try:
         image = Image.open(filename)
@@ -281,6 +294,7 @@ def open_nontransparent(filename):
         return new_image
     except:
         pass
+
 
 def manual():
     fn = 'auto_reply/manual.jpg'
@@ -309,17 +323,19 @@ def manual():
     ]
 
     line_height = ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize('底图目录', font=font)[1]
-    
-    image = Image.new('RGB', (ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize(max(lines, key=lambda line: len(line)), font=font)[0] + 2 * col_space, (line_height + row_space) * len(lines)), (255, 255, 255))
+
+    image = Image.new('RGB', (ImageDraw.Draw(Image.new('RGB', (0, 0))).textsize(max(lines, key=lambda line: len(line)),
+                      font=font)[0] + 2 * col_space, (line_height + row_space) * len(lines)), (255, 255, 255))
     draw = ImageDraw.Draw(image)
     line_pos = row_space
-    
+
     for i, line in enumerate(lines):
         sz = draw.textsize(line, font=font)
         draw.text((col_space, line_pos), line, fill=(0, 0, 0), font=font)
         line_pos += sz[1] + row_space
     image.save(os.path.join(const.datapath, 'image', fn))
     return fn
+
 
 def compress(infile, mb=None, step=10, quality=80, isabs=False):
     if not isabs:
@@ -339,7 +355,7 @@ def compress(infile, mb=None, step=10, quality=80, isabs=False):
     o_size = os.path.getsize(absinfile) / 1024
     if o_size <= mb:
         return infile
-    
+
     while o_size > mb:
         im = Image.open(absinfile)
         im = im.convert('RGB')

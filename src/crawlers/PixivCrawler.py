@@ -37,13 +37,14 @@ class PixivCursor:
     @staticmethod
     def get_one(query={}, dirty_flag=None):
         if dirty_flag is None:
-            query.update({'used': { '$ne': dirty_flag }})
+            query.update({'used': {'$ne': dirty_flag}})
         else:
-            query.update({'used': { '$size': 0 }})
+            query.update({'used': {'$size': 0}})
         ret = PixivCursor.ILLUSTS.find_one(query)
         if ret:
             PixivCursor.ILLUSTS.update_one({'_id': ret['_id']}, {'$push': {'used': dirty_flag}})
             return ret['fn'], json.loads(ret['meta'])
+
 
 class PixivCrawler:
     KKRTAG = ['弦巻こころ']
@@ -68,13 +69,13 @@ class PixivCrawler:
                 url_list.append(p.image_urls.large)
         else:
             url_list.append(r.image_urls.large)
-        
+
         created_time = r.created_time[:10].replace('-', '')
         wd = os.path.join(self._wd, created_time)
         if not os.path.isdir(wd):
             os.mkdir(wd)
         fns = []
-        
+
         for url in url_list:
             fn = os.path.basename(url)
             final_fn = os.path.join(created_time, fn)
@@ -119,7 +120,7 @@ class PixivCrawler:
                 l = r.response
             except:
                 l = None
-            
+
             if not l:
                 break
             _logger.info('get %d illusts', len(l))
@@ -158,6 +159,7 @@ class PixivCrawler:
                     break
             page += 1
         return ret
+
 
 if __name__ == '__main__':
     # usage

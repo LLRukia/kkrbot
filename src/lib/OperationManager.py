@@ -12,13 +12,13 @@ import Handler
 import ImageProcesser
 import States
 from BestdoriAssets import card, event, gacha
-from bilibili_drawcard_spider import Bilibili_DrawCard_Spider
+from crawlers.BilibiliDrawcardCrawler import BilibiliDrawcardCrawler
 from const import Emojis, Images
 from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, RecordMsg, StringMsg
 from Subscribes import Any, Group, Nany, Private
-from pixiv_crawler import PixivCursor
+from crawlers.PixivCrawler import PixivCursor
 
-bds = Bilibili_DrawCard_Spider()
+bds = BilibiliDrawcardCrawler()
 
 COMPRESS_IMAGE = True
 
@@ -29,6 +29,7 @@ if os.access(os.path.join(const.user_profile_path, 'user_profile.json'), os.R_OK
 else:
     user_profile = defaultdict(dict)
     user_profile.update({str(qq_id): {'authority': 'admin'} for qq_id in [444351271, 365181628]})
+
 
 class OperationManager:
 
@@ -64,7 +65,7 @@ class OperationManager:
             if enable_r18:
                 mmap['色'] = 'daily_r18'
             file_path, meta = PixivCursor.get_one({'mode': mmap.get(res.group(1), 'daily')}, receiver_id)
-            
+
             global COMPRESS_IMAGE
             msg = []
             if isinstance(file_path, list):
@@ -100,10 +101,10 @@ class OperationManager:
                         file_path = f'assets/cards/{resource_set_name}_card_after_training.png'
                 else:
                     file_path = f'assets/cards/{resource_set_name}_card_normal.png' \
-                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_normal.png'), os.R_OK) \
-                    else f'assets/cards/{resource_set_name}_card_after_training.png' \
-                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK) \
-                    else ''
+                        if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_normal.png'), os.R_OK) \
+                        else f'assets/cards/{resource_set_name}_card_after_training.png' \
+                        if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK) \
+                        else ''
                 if file_path:
                     global COMPRESS_IMAGE
                     if COMPRESS_IMAGE:
@@ -113,7 +114,7 @@ class OperationManager:
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
-        
+
         res = re.search(r'^查卡(\d+)(\s+(特训前|特训后))?$', msg.strip())
         if res:
             description, resource_set_name, rarity, attribute, band_id = card._detail(cid=int(res.group(1)))
@@ -124,7 +125,7 @@ class OperationManager:
                     file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
                 else:
                     file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=False) \
-                            or ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
+                        or ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
                 if file_path:
                     if COMPRESS_IMAGE:
                         file_path = ImageProcesser.compress(file_path, 600)
@@ -132,11 +133,11 @@ class OperationManager:
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
-        
+
         constraints = card._parse_query_command(msg.strip())
         if constraints:
             if constraints == '露佬':
-                await send_handler(receiver_id, MultiMsg([StringMsg('再查露佬头都给你锤爆\n'), ImageMsg({'file':'kkr/lulao'})]))
+                await send_handler(receiver_id, MultiMsg([StringMsg('再查露佬头都给你锤爆\n'), ImageMsg({'file': 'kkr/lulao'})]))
                 return True
             results = card.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', **constraints)
             if results:
@@ -172,7 +173,7 @@ class OperationManager:
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这个活动'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
-        
+
         constraints = event._parse_query_command(msg.strip())
         if constraints is not None:
             results = event.event_table.select('id', 'eventType', 'eventName', 'bannerAssetBundleName', **constraints)
@@ -184,11 +185,11 @@ class OperationManager:
                 texts = [f'{r[0]}: {r[2]}' for r in results]
                 MAX_NUM = 32
                 file_names = [ImageProcesser.thumbnail(images=images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
-                    col_space=20,
-                    row_space=20
-                ) for i in range((len(images) - 1) // MAX_NUM + 1)]
+                                                       labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                                                       label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
+                                                       col_space=20,
+                                                       row_space=20
+                                                       ) for i in range((len(images) - 1) // MAX_NUM + 1)]
                 [await send_handler(receiver_id, ImageMsg({'file': f})) for f in file_names]
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
@@ -204,13 +205,13 @@ class OperationManager:
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这个卡池'), ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'})]))
             return True
-        
+
         constraints = gacha._parse_query_command(msg.strip())
         if constraints is not None:
             if constraints == {}:
                 results = gacha.gacha_table.select_or('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', type=['permanent', 'limited'], fixed4star=[1])
             else:
-                results = gacha.gacha_table.select('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', **constraints) 
+                results = gacha.gacha_table.select('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', **constraints)
             if results:
                 images = [[
                     ImageProcesser.open_nontransparent(os.path.join(const.asset_gacha_path, 'jp', f'{r[3]}.png')) or
@@ -220,12 +221,12 @@ class OperationManager:
                 texts = [f'{r[0]}: {r[2]} ({gacha._type[r[1]]})' for r in results]
                 MAX_NUM = 32
                 file_names = [ImageProcesser.thumbnail(images=images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    image_style={'height': 140},
-                    labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
-                    col_space=20,
-                    row_space=20
-                ) for i in range((len(images) - 1) // MAX_NUM + 1)]
+                                                       image_style={'height': 140},
+                                                       labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                                                       label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
+                                                       col_space=20,
+                                                       row_space=20
+                                                       ) for i in range((len(images) - 1) // MAX_NUM + 1)]
                 [await send_handler(receiver_id, ImageMsg({'file': f})) for f in file_names]
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
@@ -249,21 +250,21 @@ class OperationManager:
                 self.logger.info(f'query gacha user {res.group(1)}')
                 query = True
                 ret = self.bilibili_drawcard_spider.get_data_by_username(res.group(1))
-                
+
             else:
                 res = re.search(r'^查抽卡id (.*?)$', msg)
                 if res:
                     uid = int(res.group(1))
                     self.logger.info(f'query gacha user {uid}')
                     query = True
-                    
+
                     ret = self.bilibili_drawcard_spider.get_data_by_uid(uid)
-            
+
             if not query:
                 return False
-            
+
             if not ret:
-                await send_handler(receiver_id, MultiMsg([ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('没出货查什么查')]))
+                await send_handler(receiver_id, MultiMsg([ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('没出货查什么查')]))
                 return True
 
             images = []
@@ -279,7 +280,7 @@ class OperationManager:
                 r = card.card_table.select_by_single_value('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', id=card_id)[0]
                 if r:
                     images.append(ImageProcesser.merge_image(r[1], r[2], r[3], r[4]) or
-                        ImageProcesser.white_padding(180, 180))
+                                  ImageProcesser.white_padding(180, 180))
                     t = time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(d.gacha_at // 1000))
                     s = f'{t}'
                     texts.append(s)
@@ -291,11 +292,11 @@ class OperationManager:
                     images = []
                     texts = []
                     stringmsg = []
-            
+
             if images:
                 file_name = ImageProcesser.thumbnail(images=images, labels=texts, col_space=40)
                 await send_handler(receiver_id, MultiMsg([ImageMsg({'file': file_name}), StringMsg('\n'.join(stringmsg))]))
-            
+
             if too_large:
                 await send_handler(receiver_id, MultiMsg([ImageMsg({'file': f'kkr/nb'}), StringMsg('出货的也太多了，kkr好累！下次再查吧！')]))
             return True
@@ -356,7 +357,7 @@ class OperationManager:
             elif rl:
                 await send_handler(receiver_id, StringMsg('\n\n'.join(rl)))
             else:
-                await send_handler(receiver_id, MultiMsg([ImageMsg({'file':f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('哈哈，没车')]))
+                await send_handler(receiver_id, MultiMsg([ImageMsg({'file': f'kkr/{random.choice(self.preset_keywords["憨批"])}'}), StringMsg('哈哈，没车')]))
             return True
         else:
             if submit_permission or user_profile[str(sender_id)].get('authority') == 'admin':
@@ -365,7 +366,7 @@ class OperationManager:
                     room_code = res.group(1)
                     flag, msg = self._submit_room_number(room_code, sender_id, msg)
                     if flag:
-                        await send_handler(receiver_id, MultiMsg([ImageMsg({'file':f'kkr/nb'}), StringMsg('上传车牌啦！')]))
+                        await send_handler(receiver_id, MultiMsg([ImageMsg({'file': f'kkr/nb'}), StringMsg('上传车牌啦！')]))
                     else:
                         await send_handler(receiver_id, StringMsg(f'kkr坏了，芽佬快看看QAQ  {msg}'))
                     return True

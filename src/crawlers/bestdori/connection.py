@@ -3,6 +3,7 @@ import json
 
 from . import EventTable, GachaTable
 
+
 def event_gacha(json_path, database_file, output_file, logger):
     event_table = EventTable(database_file)
     gacha_table = GachaTable(database_file)
@@ -13,7 +14,6 @@ def event_gacha(json_path, database_file, output_file, logger):
     else:
         output = {'event2gacha': [{} for _ in servers], 'gacha2event': [{} for _ in servers]}
 
-    
     event_start_at = [{} for _ in servers]
     event_end_at = [{} for _ in servers]
     start_at_event = [{} for _ in servers]
@@ -32,7 +32,7 @@ def event_gacha(json_path, database_file, output_file, logger):
                     if not start_at_event[i].get(data['startAt'][i]):
                         start_at_event[i][data['startAt'][i]] = []
                     start_at_event[i][data['startAt'][i]].append(eid)
-                
+
                 if data['endAt'][i]:
                     event_end_at[i][eid] = data['endAt'][i]
                     if not end_at_event[i].get(data['endAt'][i]):
@@ -48,13 +48,13 @@ def event_gacha(json_path, database_file, output_file, logger):
                     if not start_at_gacha[i].get(data['publishedAt'][i]):
                         start_at_gacha[i][data['publishedAt'][i]] = []
                     start_at_gacha[i][data['publishedAt'][i]].append(gid)
-            
+
                 if data['closedAt'][i]:
                     gacha_end_at[i][gid] = data['closedAt'][i]
                     if not end_at_gacha[i].get(data['closedAt'][i]):
                         end_at_gacha[i][data['closedAt'][i]] = []
                     end_at_gacha[i][data['closedAt'][i]].append(gid)
-    
+
     for i in range(len(servers)):
         for eid, start_at in event_start_at[i].items():
             if not output['event2gacha'][i].get(eid):
@@ -65,7 +65,7 @@ def event_gacha(json_path, database_file, output_file, logger):
                     if not output['gacha2event'][i].get(gid):
                         output['gacha2event'][i][gid] = []
                     output['gacha2event'][i][gid].append(eid)
-        
+
         for eid, end_at in event_end_at[i].items():
             if not output['event2gacha'][i].get(eid):
                 output['event2gacha'][i][eid] = []

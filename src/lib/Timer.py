@@ -21,7 +21,7 @@ class Timer:
         except Exception as e:
             _logger.error('when callback, error occured. %s', e)
         if self._repeat:
-            self._task = asyncio.ensure_future(self._job())
+            self._task = asyncio.ensure_future(self._job(), loop=asyncio.get_event_loop())
 
     def cancel(self):
         self._task.cancel()

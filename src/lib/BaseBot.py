@@ -1,12 +1,11 @@
 from MsgTypes import PrivateMsg, GroupMsg
 from Timer import Timer
-from Subscribes import Group, Private, Any, Nany
-from typing import Union, Callable
 from collections import defaultdict
 
+
 class Bot:
-    def TO_SUBSCRIBE(self):
-        raise Exception('Not Implement')
+    def get_bind_dict(self):
+        raise NotImplementedError
 
     def __init__(self, server):
         self.server = server
@@ -15,42 +14,42 @@ class Bot:
         self._handler_callbacks = defaultdict(dict)
         self.init_subscribe()
 
+    def init_subscribe(self):
+        for e, f in self.get_bind_dict().items():
+            self.logger.info('init_subscribe %s: %s', e, f)
+            self.server.subscribe(e, f)
+
     def __del__(self):
         self._on_destroy()
 
     def _on_destroy(self):
         self.clear_subscribes()
 
-    def add_timer(self, it, func, async_cb=True):
-        return Timer(it, func, False, async_cb)
+    def add_timer(self, time, func, async_cb=True):
+        return Timer(time, func, False, async_cb)
 
-    def add_repeat_timer(self, it, func, async_cb=True):
-        return Timer(it, func, True, async_cb)
+    def add_repeat_timer(self, time, func, async_cb=True):
+        return Timer(time, func, True, async_cb)
 
     def clear_subscribes(self):
-        for e, f in self.TO_SUBSCRIBE().items():
+        for e, f in self.get_bind_dict().items():
             self.server.unsubscribe(e, f)
-
-    def init_subscribe(self):
-        for e, f in self.TO_SUBSCRIBE().items():
-            self.logger.info('init_subscribe %s: %s', e, f)
-            self.server.subscribe(e, f)
 
     def remove_handler(self, handler):
         if handler not in self.handlers:
-            raise RuntimeError('Trying to remove a handler which is not registered')
-        # if this handler referenced by other, it will not call Handler._on_destroy, and may cause errors
+            raise RuntimeError('Trying to remove a handler which has not been registered')
+        # If this handler referenced by other, it will not call Handler._on_destroy, and may cause errors
         # so DO NOT reference handler except here
         self.handlers.remove(handler)
 
     def add_handler(self, handler):
         if handler in self.handlers:
-            raise RuntimeError('Trying to add a handler which is registered')
+            raise RuntimeError('Duplicated add handler')
         self.handlers.add(handler)
 
-    def begin(self):
+    def start(self):
         for handler in self.handlers:
-            handler.begin()
+            handler.start()
 
     def _handler_subscribe(self, handler, subs_type, callback):
         if handler not in self.handlers:

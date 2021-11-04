@@ -1,6 +1,6 @@
 import copy
-import os
 import functools
+import os
 import random
 from collections import defaultdict
 
@@ -44,7 +44,7 @@ class CommonPrivateHandler(Handler.Handler):
             'chat': PrivateChatState(self, uid),
         }
 
-    def begin(self):
+    def start(self):
         self.state['chat'].enter()
 
 
@@ -73,11 +73,14 @@ class GroupChatState(States.BaseState):
             '滑': 'skateboard',
             '我日你妈': 'worinima',
         }
-        self.kkr_images = [n for n in os.listdir(os.path.join(
-            const.datapath, 'image', 'kkr')) if os.path.isfile(os.path.join(const.datapath, 'image', 'kkr', n))]
-        [self.kkr_images.remove(word) for word in ['welcome', 'tql', 'lulao']]
-        self.operator = OperationManager(
-            self.hdlr.bot, self.preset_keywords)
+        if not os.path.exists(os.path.join(const.datapath, 'image', 'kkr')):
+            self.hdlr.bot.logger.error('running without kkr image')
+            self.kkr_images = []
+        else:
+            self.kkr_images = [n for n in os.listdir(os.path.join(
+                const.datapath, 'image', 'kkr')) if os.path.isfile(os.path.join(const.datapath, 'image', 'kkr', n))]
+            [self.kkr_images.remove(word) for word in ['welcome', 'tql', 'lulao']]
+        self.operator = OperationManager(self.hdlr.bot, self.preset_keywords)
 
     async def on_chat(self, context):
         if await self.game_judge(context):
@@ -116,7 +119,6 @@ class GroupChatState(States.BaseState):
         msg = context['raw_message']
         gid = context['group_id']
         return await self.operator.query_pixiv(self.hdlr.bot.send_group_msg, msg, gid, enable_r18)
-
 
     async def game_judge(self, context):
         msg = context['raw_message']
@@ -274,7 +276,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
     @property
     def sub_stage(self):
         return self._sub_stage
-    
+
     @sub_stage.setter
     def sub_stage(self, v):
         self._sub_stage = v
@@ -313,7 +315,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
         if self.players[uid] != OneNightState._FLOW[self.sub_stage]:
             return
         cur_char = OneNightState._FLOW[self.sub_stage]
-        func = getattr(self, '_%s'%(cur_char.lower()))
+        func = getattr(self, '_%s' % (cur_char.lower()))
         await func(context)
 
     async def _werewolf(self, context, first=None):
@@ -332,7 +334,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
             msg = msg.split(' ')
             if len(msg) == 2:
                 p1, p2 = int(msg[0]), int(msg[1])
-                if p1 >=1 and p1 <= 3 and p2 >=1 and p2 <= 3:
+                if p1 >= 1 and p1 <= 3 and p2 >= 1 and p2 <= 3:
                     p1 = self.formation[p1]
                     p2 = self.formation[p2]
                     await self._send_p(uid, StringMsg(f'身份1是{p1}: {OneNightState._CHARS[p1]}'))
@@ -355,7 +357,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
         msg = context['raw_message']
         uid = str(context['sender']['user_id'])
         msg = msg.strip()
-        
+
         if msg in self.players and msg != uid:
             p = self.players[msg]
             self.players[msg] = self.players[uid]
@@ -375,7 +377,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
         msg = context['raw_message']
         uid = str(context['sender']['user_id'])
         msg = msg.strip()
-        
+
         if msg.find(' ') >= 0:
             msg = msg.split(' ')
             if len(msg) == 2:
@@ -433,7 +435,7 @@ Tips:最终成为村民的玩家需要在白天找出任意一名狼人。"""
 
     async def _on_stage_1(self):
         cur_char = OneNightState._FLOW[self.sub_stage]
-        func = getattr(self, '_%s'%(cur_char.lower()))
+        func = getattr(self, '_%s' % (cur_char.lower()))
         await func(None, self.reverse_players[cur_char])
 
     async def _on_stage_2(self, context):
@@ -466,5 +468,5 @@ class CommonGroupHandler(Handler.Handler):
             '1night': OneNightState(self, gid),
         }
 
-    def begin(self):
+    def start(self):
         self.state['chat'].enter()

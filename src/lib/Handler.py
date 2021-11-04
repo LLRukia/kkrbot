@@ -26,9 +26,9 @@ class Handler:
     def unsubscribe(self, subs_type: Union[Any, Nany]):
         self.subscribes.discard(subs_type)
         self.bot._handler_unsubscribe(self, subs_type)
-    
+
     def on_state_changed(self, new):
         self.state[new].enter()
-    
+
     def lazy_init(self):
         pass

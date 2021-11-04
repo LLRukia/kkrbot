@@ -1,33 +1,37 @@
-import os
-import re
-import sqlite3
-import json
 import collections
 import datetime
+import json
+import logging
+import os
 import random
+import re
+import sqlite3
+
+from crawlers.bestdori import CardTable, EventTable, GachaTable
 from PIL import Image
 
 import const
 import ImageProcesser
-from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
+from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, RecordMsg, StringMsg
 
-from crawler import CardTable, EventTable, GachaTable
+_logger = logging.getLogger('quart.app')
+
 
 class Card:
     def __init__(self):
-        self.card_table = CardTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
+        self.card_table = CardTable(os.path.join(const.datapath, 'bestdori.db'))
         self._mapping = {
             'characterId': {
-                '户山香澄': 1,'香澄': 1, 'kasumi': 1, 'ksm': 1,
+                '户山香澄': 1, '香澄': 1, 'kasumi': 1, 'ksm': 1,
                 '花园多惠': 2, '多惠': 2, 'tae': 2, 'otae': 2, ''
                 '牛込里美': 3, '里美': 3, 'rimi': 3,
                 '山吹沙绫': 4, '沙绫': 4, 'saya': 4,
-                '市谷有咲': 5,'有咲': 5, 'arisa': 5, 'ars': 5,
+                '市谷有咲': 5, '有咲': 5, 'arisa': 5, 'ars': 5,
                 '美竹兰': 6, '兰': 6, 'ran': 6,
                 '青叶摩卡': 7, '摩卡': 7, 'moca': 7,
                 '上原绯玛丽': 8, '绯玛丽': 8, 'hmr': 8, 'himari': 8,
                 '宇田川巴': 9, '巴': 9, 'tomoe': 9,
-                '羽泽鸫': 10, '鸫': 10, 'tsugumi': 10, 'tgm': 10, 
+                '羽泽鸫': 10, '鸫': 10, 'tsugumi': 10, 'tgm': 10,
                 '弦卷心': 11, '心': 11, 'kkr': 11, 'kokoro': 11,
                 '濑田薰': 12, '薰': 12, 'kaoru': 12, 'kor': 12,
                 '北泽育美': 13, '育美': 13, 'hagumi': 13, 'hgm': 13,
@@ -73,7 +77,7 @@ class Card:
             },
             'skillId': {
                 '分': [1, 2, 3, 4, 17, 18, 20, 21, 22, 25, 26], '分卡': [1, 2, 3, 4, 17, 18, 20, 21, 22, 25, 26],
-                '奶': [8, 9, 10, 13, 14, 15, 16], '奶卡': [8, 9, 10, 13, 14, 15, 16], 
+                '奶': [8, 9, 10, 13, 14, 15, 16], '奶卡': [8, 9, 10, 13, 14, 15, 16],
                 '判': [5, 6, 7, 11, 12, 15, 16], '判卡': [5, 6, 7, 11, 12, 15, 16],
                 '盾': [23, 24], '盾卡': [23, 24],
                 '115': 20, '115分': 20,
@@ -82,9 +86,9 @@ class Card:
             }
         }
 
-        with open(os.path.join(const.workpath, 'data', 'json', 'all_skills.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(const.datapath, 'json', 'all_skills.json'), 'r', encoding='utf-8') as f:
             self._all_skills = json.load(f)
-        
+
         self._types = {
             'initial': '初始',
             'permanent': '无期限',
@@ -121,10 +125,10 @@ class Card:
             25: '65%分|55%分(great)',
             26: '110%分|90%分(great)',
         }
-    
+
     def _parse_query_command(self, string):
         string = string.split()
-        if string[0] == '查卡' and len(string) > 1: # avoid query of all cards
+        if string[0] == '查卡' and len(string) > 1:  # avoid query of all cards
             constraint = collections.OrderedDict()
             for c in string[1:]:
                 valid_parameter = False
@@ -143,22 +147,23 @@ class Card:
                 if not valid_parameter:
                     return {}
             return constraint
-    
+
     def _detail(self, cid):
         try:
             name, skill_id, performance, technique, visual, type_, resource_set_name, rarity, attribute, band_id = self.card_table.select_by_single_value(
-                'name', 'skillId', 'performance', 'technique', 'visual', 'type', 
+                'name', 'skillId', 'performance', 'technique', 'visual', 'type',
                 'resourceSetName', 'rarity', 'attribute', 'bandId',
                 id=cid)[0]
         except:
             return '', '', -1, '', -1
         else:
             skill_id = str(skill_id)
-            skill_description = self._all_skills[skill_id]['simpleDescription'][3] or self._all_skills[skill_id]['simpleDescription'][0] or self._all_skills[skill_id]['simpleDescription'][2] or self._all_skills[skill_id]['simpleDescription'][1]
+            skill_description = self._all_skills[skill_id]['simpleDescription'][3] or self._all_skills[skill_id]['simpleDescription'][
+                0] or self._all_skills[skill_id]['simpleDescription'][2] or self._all_skills[skill_id]['simpleDescription'][1]
             skill_description = skill_description.replace('\n', '') + f' ({",".join([str(round(n, 1)) for n in self._all_skills[skill_id]["duration"]])})'
             overall = f'{performance}/{technique}/{visual}/{performance + technique + visual}'
             return f'\n标题: {name}\n种类: {self._types[type_]}\n三围: {overall}\n技能: {skill_description}', resource_set_name, rarity, attribute, band_id
-    
+
     async def query_card(self, send_handler, msg, receiver_id):   # send_handler: Bot send handler
         res = re.search(r'^无框(\d+)(\s+(特训前|特训后))?$', msg.strip())
         if res:
@@ -173,16 +178,16 @@ class Card:
                         file_path = f'assets/cards/{resource_set_name}_card_after_training.png'
                 else:
                     file_path = f'assets/cards/{resource_set_name}_card_normal.png' \
-                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_normal.png'), os.R_OK) \
-                    else f'assets/cards/{resource_set_name}_card_after_training.png' \
-                    if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK) \
-                    else ''
+                        if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_normal.png'), os.R_OK) \
+                        else f'assets/cards/{resource_set_name}_card_after_training.png' \
+                        if os.access(os.path.join(const.asset_card_path, f'{resource_set_name}_card_after_training.png'), os.R_OK) \
+                        else ''
                 if file_path:
                     await send_handler(receiver_id, ImageMsg({'file': file_path}))
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
             return True
-        
+
         res = re.search(r'^查卡(\d+)(\s+(特训前|特训后))?$', msg.strip())
         if res:
             description, resource_set_name, rarity, attribute, band_id = self._detail(cid=int(res.group(1)))
@@ -193,17 +198,17 @@ class Card:
                     file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
                 else:
                     file_path = ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=False) \
-                            or ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
+                        or ImageProcesser.merge_image(resource_set_name, rarity, attribute, band_id, thumbnail=False, trained=True)
                 if file_path:
                     await send_handler(receiver_id, MultiMsg([ImageMsg({'file': file_path}), StringMsg(description)]))
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这张卡'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
             return True
-        
+
         constraints = self._parse_query_command(msg.strip())
         if constraints:
             if constraints == '露佬':
-                await send_handler(receiver_id, MultiMsg([StringMsg('再查露佬头都给你锤爆\n'), ImageMsg({'file':'kkr/lulao'})]))
+                await send_handler(receiver_id, MultiMsg([StringMsg('再查露佬头都给你锤爆\n'), ImageMsg({'file': 'kkr/lulao'})]))
                 return True
             results = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', **constraints)
             if results:
@@ -230,9 +235,10 @@ class Card:
             return True
         return False
 
+
 class Event:
     def __init__(self, card_table):
-        self.event_table = EventTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
+        self.event_table = EventTable(os.path.join(const.datapath, 'bestdori.db'))
         self.card_table = card_table
         self._mapping = {
             'attribute': {
@@ -275,9 +281,9 @@ class Event:
             3: 'cn',
             4: 'kr',
         }
-        with open(os.path.join(const.workpath, 'data', 'json', 'event_gacha.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(const.datapath, 'json', 'event_gacha.json'), 'r', encoding='utf-8') as f:
             self._event_gacha = json.load(f)['event2gacha']
-    
+
     def _parse_query_command(self, string):
         string = string.split()
         if string[0] == '活动列表':
@@ -297,12 +303,12 @@ class Event:
                 if not valid_parameter:
                     return None
             return constraint
-    
+
     def _detail(self, eid, server):
         banner_asset_bundle_name, = self.event_table.select_by_single_value('bannerAssetBundleName', id=eid)[0]
         if banner_asset_bundle_name:
             detail = []
-            with open(os.path.join(const.workpath, 'data', 'json', 'events', f'{eid}.json'), 'r', encoding='utf-8') as f:
+            with open(os.path.join(const.datapath, 'json', 'events', f'{eid}.json'), 'r', encoding='utf-8') as f:
                 event_data = json.load(f)
             if event_data["startAt"][server]:
                 file_path = f'assets/events/{self._server_name[server]}/{banner_asset_bundle_name}.png'
@@ -317,7 +323,7 @@ class Event:
 
                 detail.append(StringMsg('\n属性: '))
                 [(detail.append(ImageMsg({'file': f'assets/res/{a["attribute"]}.png'})), detail.append(StringMsg(f'+{a["percent"]}%'))) for a in event_data['attributes']]
-                
+
                 detail.append(StringMsg('\n角色: '))
                 c0 = event_data['characters'][0]
                 for c in event_data['characters'][1:]:
@@ -328,7 +334,7 @@ class Event:
                 else:
                     [detail.append(ImageMsg({'file': f'assets/res/chara_icon_{c["characterId"]}.png'})) for c in event_data['characters']]
                     detail.append(StringMsg(f'+{c0["percent"]}%'))
-                
+
                 detail.append(StringMsg('\n奖励: '))
                 cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
                 filenames = [ImageProcesser.merge_image(c[1], c[2], c[3], c[4], thumbnail=True, trained=False, return_fn=True) for c in cards]
@@ -337,14 +343,14 @@ class Event:
             else:
                 detail.append(StringMsg('活动尚未开始'))
             return detail
-    
+
     def _detail_ver2(self, eid, server):
         res = self.event_table.select_by_single_value('bannerAssetBundleName', id=eid)
         if res:
             banner_asset_bundle_name, = res[0]
             if banner_asset_bundle_name:
                 detail = []
-                with open(os.path.join(const.workpath, 'data', 'json', 'events', f'{eid}.json'), 'r', encoding='utf-8') as f:
+                with open(os.path.join(const.datapath, 'json', 'events', f'{eid}.json'), 'r', encoding='utf-8') as f:
                     event_data = json.load(f)
                 if event_data["startAt"][server]:
                     file_path = f'assets/events/{self._server_name[server]}/{banner_asset_bundle_name}.png'
@@ -359,9 +365,9 @@ class Event:
 
                     detail.append(StringMsg('\n属性: '))
                     [(detail.append(ImageMsg({'file': f'assets/res/{a["attribute"]}.png'})), detail.append(StringMsg(f'+{a["percent"]}%'))) for a in event_data['attributes']]
-                    
+
                     detail.append(StringMsg('\n角色: '))
-                    
+
                     images = [[
                         ImageProcesser.open_nontransparent(os.path.join(const.asset_resource_path, f'chara_icon_{c["characterId"]}.png'))
                     ] for c in event_data['characters']]
@@ -373,7 +379,7 @@ class Event:
                         row_space=5,
                     )
                     detail.append(ImageMsg({'file': character_filename}))
-        
+
                     detail.append(StringMsg('\n奖励: '))
                     cards = self.card_table.select('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', id=event_data['rewardCards'])
                     rewards_filename = ImageProcesser.thumbnail(
@@ -383,11 +389,11 @@ class Event:
                         row_space=5,
                     )
                     detail.append(ImageMsg({'file': rewards_filename}))
-                    
+
                     if self._event_gacha[server].get(str(eid)):
                         detail.append(StringMsg('\n关联卡池: '))
                         for gacha_id in self._event_gacha[server][str(eid)]:
-                            with open(os.path.join(const.workpath, 'data', 'json', 'gachas', f'{gacha_id}.json'), 'r', encoding='utf-8') as f:
+                            with open(os.path.join(const.datapath, 'json', 'gachas', f'{gacha_id}.json'), 'r', encoding='utf-8') as f:
                                 gacha_data = json.load(f)
                             new_cards = [card for card in gacha_data['newCards'] if gacha_data['details'][server][str(card)]['pickup']]
                             if new_cards:
@@ -411,7 +417,7 @@ class Event:
                 else:
                     detail = [StringMsg('活动尚未开始，查查日服吧'), ImageMsg({'file': f'kkr/spin'})]
             return detail
-    
+
     async def query(self, send_handler, msg, receiver_id):
         res = re.search(r'^活动(\d+)(\s+(日服|国际服|台服|国服|韩服))?$', msg.strip())
         if res:
@@ -421,7 +427,7 @@ class Event:
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这个活动'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
             return True
-        
+
         constraints = self._parse_query_command(msg.strip())
         if constraints is not None:
             results = self.event_table.select('id', 'eventType', 'eventName', 'bannerAssetBundleName', **constraints)
@@ -433,20 +439,21 @@ class Event:
                 texts = [f'{r[0]}: {r[2]}' for r in results]
                 MAX_NUM = 32
                 file_names = [ImageProcesser.thumbnail(images=images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
-                    col_space=20,
-                    row_space=20
-                ) for i in range((len(images) - 1) // MAX_NUM + 1)]
+                                                       labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                                                       label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
+                                                       col_space=20,
+                                                       row_space=20
+                                                       ) for i in range((len(images) - 1) // MAX_NUM + 1)]
                 [await send_handler(receiver_id, ImageMsg({'file': f})) for f in file_names]
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
             return True
         return False
 
+
 class Gacha:
     def __init__(self, card_table):
-        self.gacha_table = GachaTable(os.path.join(const.workpath, 'data', 'bestdori.db'))
+        self.gacha_table = GachaTable(os.path.join(const.datapath, 'bestdori.db'))
         self.card_table = card_table
         self._mapping = {
             'type': {
@@ -484,7 +491,7 @@ class Gacha:
             3: 'cn',
             4: 'kr',
         }
-        with open(os.path.join(const.workpath, 'data', 'json', 'event_gacha.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(const.datapath, 'json', 'event_gacha.json'), 'r', encoding='utf-8') as f:
             self._gacha_event = json.load(f)['gacha2event']
 
     def _parse_query_command(self, string):
@@ -506,13 +513,13 @@ class Gacha:
                 if not valid_parameter:
                     return None
             return constraint
-    
+
     def _detail(self, eid, server):
         res = self.gacha_table.select_by_single_value('bannerAssetBundleName', 'resourceName', id=eid)
         if res:
             detail = []
             banner_asset_bundle_name, resourceName = res[0]
-            with open(os.path.join(const.workpath, 'data', 'json', 'gachas', f'{eid}.json'), 'r', encoding='utf-8') as f:
+            with open(os.path.join(const.datapath, 'json', 'gachas', f'{eid}.json'), 'r', encoding='utf-8') as f:
                 gacha_data = json.load(f)
             if gacha_data["publishedAt"][server]:
                 file_path = f'assets/gachas/{self._server_name[server]}/{banner_asset_bundle_name}.png'
@@ -539,13 +546,13 @@ class Gacha:
                         row_space=5,
                     )
                     detail.append(ImageMsg({'file': rewards_filename}))
-                
+
                 detail.append(StringMsg(f'\n描述: {gacha_data["description"][server]}'))
-                
+
                 if self._gacha_event[server].get(str(eid)):
                     detail.append(StringMsg('\n关联活动: '))
                     for event_id in self._gacha_event[server][str(eid)]:
-                        with open(os.path.join(const.workpath, 'data', 'json', 'events', f'{event_id}.json'), 'r', encoding='utf-8') as f:
+                        with open(os.path.join(const.datapath, 'json', 'events', f'{event_id}.json'), 'r', encoding='utf-8') as f:
                             event_data = json.load(f)
                         file_path = f'assets/events/{self._server_name[server]}/{event_data["bannerAssetBundleName"]}.png'
                         if os.access(os.path.join(const.asset_event_path, self._server_name[server], f'{event_data["bannerAssetBundleName"]}.png'), os.R_OK):
@@ -567,7 +574,7 @@ class Gacha:
             else:
                 detail = [StringMsg('卡池未开放，查查别的服务器吧'), ImageMsg({'file': f'kkr/spin'})]
             return detail
-    
+
     async def query(self, send_handler, msg, receiver_id):
         res = re.search(r'^卡池(\d+)(\s+(日服|国际服|台服|国服|韩服))?$', msg.strip())
         if res:
@@ -577,13 +584,13 @@ class Gacha:
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('没有这个卡池'), ImageMsg({'file': f'kkr/{random.choice(["hanpi1", "hanpi2", "hanpi3"])}'})]))
             return True
-        
+
         constraints = self._parse_query_command(msg.strip())
         if constraints is not None:
             if constraints == {}:
                 results = self.gacha_table.select_or('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', type=['permanent', 'limited'], fixed4star=[1])
             else:
-                results = self.gacha_table.select('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', **constraints) 
+                results = self.gacha_table.select('id', 'type', 'gachaName', 'bannerAssetBundleName', 'resourceName', **constraints)
             if results:
                 images = [[
                     ImageProcesser.open_nontransparent(os.path.join(const.asset_gacha_path, 'jp', f'{r[3]}.png')) or
@@ -593,18 +600,25 @@ class Gacha:
                 texts = [f'{r[0]}: {r[2]} ({self._type[r[1]]})' for r in results]
                 MAX_NUM = 32
                 file_names = [ImageProcesser.thumbnail(images=images[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    image_style={'height': 140},
-                    labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
-                    label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
-                    col_space=20,
-                    row_space=20
-                ) for i in range((len(images) - 1) // MAX_NUM + 1)]
+                                                       image_style={'height': 140},
+                                                       labels=texts[i * MAX_NUM: min((i + 1) * MAX_NUM, len(images))],
+                                                       label_style={'font_size': 20, 'font_type': 'default_font.ttf'},
+                                                       col_space=20,
+                                                       row_space=20
+                                                       ) for i in range((len(images) - 1) // MAX_NUM + 1)]
                 [await send_handler(receiver_id, ImageMsg({'file': f})) for f in file_names]
             else:
                 await send_handler(receiver_id, MultiMsg([StringMsg('kkr找不到'), ImageMsg({'file': f'kkr/tuxie'})]))
             return True
         return False
 
-card = Card()
-event = Event(card.card_table)
-gacha = Gacha(card.card_table)
+
+if not os.path.exists(os.path.join(const.datapath, 'bestdori.db')):
+    _logger.warn('please run BestdoriCrawler.py first!')
+    card = None
+    event = None
+    gacha = None
+else:
+    card = Card()
+    event = Event(card.card_table)
+    gacha = Gacha(card.card_table)

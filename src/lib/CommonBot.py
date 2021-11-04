@@ -11,8 +11,9 @@ from MsgTypes import EmojiMsg, ImageMsg, MultiMsg, StringMsg, RecordMsg
 import ImageProcesser
 from OperationManager import OperationManager
 
+
 class CommonBot(Bot):
-    def TO_SUBSCRIBE(self):
+    def get_bind_dict(self):
         return {
             'notice.group_increase': self.on_group_increase,
             'notice.group_decrease': self.on_group_decrease,
@@ -26,7 +27,7 @@ class CommonBot(Bot):
         self.add_handler(LoseliaGroupHandler(self, Groups.LU))
         self.add_handler(EasyGroupHandler(self, Groups.LSJJKX))
         self.add_handler(EasyGroupHandler(self, Groups.ZOO))
-        self.begin()
+        self.start()
         self._inited = False
 
     def lazy_init(self):
@@ -35,9 +36,9 @@ class CommonBot(Bot):
         for hdlr in self.handlers:
             hdlr.lazy_init()
 
-    def begin(self):
-        super().begin()
-        self.logger.info('begin')
+    def start(self):
+        super().start()
+        self.logger.info('start')
         # self.add_timer(5, self.get_status)
         # self.add_repeat_timer(60*30, self.get_status)
 
@@ -113,17 +114,6 @@ class CommonBot(Bot):
             if await self.operator.fixed_roomcode_reply(self.send_private_msg, msg, uid, uid, logger=self.logger):
                 return
 
-        # if context['raw_message'].strip().startswith('/'):
-        #     s = context['raw_message'][1:]
-        #     try:
-        #         d = json.loads(s)
-        #     except:
-        #         self.logger.error('exec command failed, %s', s)
-        #     command = d['command']
-            
-        #     f = getattr(self, command)
-        #     f and callable(f) and await f(context, d)
-        
         return {}
 
     async def save_pic(self, context, d):

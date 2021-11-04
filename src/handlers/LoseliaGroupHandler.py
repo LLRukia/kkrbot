@@ -6,6 +6,7 @@ from handlers.CommonHandler import CommonGroupHandler, GroupChatState, OneNightS
 from Subscribes import GroupEx
 from string import Template
 
+
 class LoseliaGroupHandler(CommonGroupHandler):
     def __init__(self, bot, gid):
         super().__init__(bot, gid)
@@ -61,13 +62,13 @@ class LoseliaGroupChatState(GroupChatState):
         self.chat_count += 1
         if await self.game_judge(context):
             return
-        
+
         if await self.fixed_reply(context):
             return
 
         if await self.fixed_roomcode_reply(context):
             return
-        
+
         if await self.query_pixiv(context):
             return
 
@@ -76,19 +77,19 @@ class LoseliaGroupChatState(GroupChatState):
 
         if await self.query_card(context):
             return
-        
+
         if await self.query_event(context):
             return
-        
+
         if await self.query_gacha(context):
             return
-        
+
         if await self.change_back_jpg(context):
             return
 
         if await self.handle_jpg(context):
             return
-        
+
         if await self.handle_common_chat(context):
             return
 
@@ -113,8 +114,8 @@ class LoseliaGroupChatState(GroupChatState):
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_give.jpg'}))
             return True
         if ('妹子' in msg or '女人' in msg or '女的' in msg) and random.randint(0, 3) == 1:
-           await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file':'snapshot/ll_girl.jpg'}))
-           return True
+            await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_girl.jpg'}))
+            return True
         if ('gay' in msg or '基友' in msg or '搞基' in msg) and random.randint(0, 1) == 1:
             await self.hdlr.bot.send_group_msg(gid, ImageMsg({'file': 'snapshot/ll_gay.jpg'}))
             return True
@@ -124,11 +125,11 @@ class LoseliaGroupChatState(GroupChatState):
         if '草' in msg and random.randint(0, 10) == 1:
             await self.hdlr.bot.send_group_msg(gid, StringMsg('草'))
             return True
-        
+
     async def handle_common_chat(self, context):
         if await self.handle_lavish_loselia(context):
             return True
-        
+
         return await super().handle_common_chat(context)
 
     async def break_repeat(self, context):
@@ -136,7 +137,7 @@ class LoseliaGroupChatState(GroupChatState):
         self.last_message[gid] = ''
         self.repeat_users[gid].clear()
         await self.hdlr.bot.send_group_msg(gid, StringMsg('别整天复读啦，我要看到露佬smile！'))
-        await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'auto_reply/are_you_smiling.mp3'})) 
+        await self.hdlr.bot.send_group_msg(gid, RecordMsg({'file': 'auto_reply/are_you_smiling.mp3'}))
 
     async def on_group_changed(self, context, flag):
         if flag:
@@ -157,7 +158,7 @@ class LoseliaGroupChatState(GroupChatState):
     def enter(self):
         self.hdlr.subscribe(self.group_subscribe_ex, self.on_group_changed)
         super().enter()
-    
+
     def leave(self, target):
         self.hdlr.unsubscribe(self.group_subscribe_ex)
         super().leave(target)

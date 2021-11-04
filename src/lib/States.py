@@ -12,9 +12,9 @@ class BaseState:
 class NonState(BaseState):
     def __init__(self, hdlr):
         super().__init__(hdlr)
-    
+
     def enter(self):
         pass
-    
+
     def leave(self, target):
         pass
