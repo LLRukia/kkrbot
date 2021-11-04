@@ -3,9 +3,10 @@ import logging
 import os
 import pickle
 import time
+import asyncio
 
 import const
-import requests
+import httpx
 
 _logger = logging.getLogger('quart.app')
 
@@ -83,12 +84,12 @@ class BilibiliDrawcardCrawler:
         return items
 
     def _request_page(self, page=1, limit=20):
-        payload = {
+        params = {
             'page': page,
             'limit': limit,
             '_': int(time.time() * 1000)
         }
-        r = requests.get('https://qcloud-sdkact-api.biligame.com/bangdream/h5/user/situation/all', payload, timeout=20)
+        r = httpx.get('https://qcloud-sdkact-api.biligame.com/bangdream/h5/user/situation/all', params=params, timeout=20)
         r.raise_for_status()
         j = r.json()
         if j['code'] != 0:
