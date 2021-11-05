@@ -1,2 +1,0 @@
-config = None
-logger = None

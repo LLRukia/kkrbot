@@ -1,9 +1,0 @@
-cry = 9
-pig = 46
-thumb = 76
-unthumb = 77
-bad_smile = 101
-kitchen_knife = 112
-funny = 178
-doge = 179
-ghost = 187

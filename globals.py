@@ -1,0 +1,12 @@
+config = None
+logger = None
+datapath = ''
+workpath = ''
+staticpath = ''
+user_profile_path = ''
+asset_card_path = ''
+asset_card_thumb_path = ''
+asset_event_path = ''
+asset_gacha_path = ''
+asset_resource_path = ''
+kkr_id = None
