@@ -1,14 +1,10 @@
 import functools
-import logging
 import os
 import pickle
 import time
-import asyncio
 
-import const
+import globals
 import httpx
-
-_logger = logging.getLogger('quart.app')
 
 
 class RollbackError(Exception):
@@ -22,13 +18,12 @@ class RollbackError(Exception):
 
 class BilibiliDrawcardCrawler:
 
-    SAVEFILE = os.path.join(const.datapath, 'save.pickle')
+    SAVEFILE = os.path.join(globals.config.datapath, 'save.pickle')
 
     def __init__(self):
+        self._gacha_dict = {}
         if not os.path.exists(self.SAVEFILE):
-            _logger.info('cannot find bilibili drawcard data, fetch once')
             self._data = []
-            self.fetch_once()
         else:
             self._data = self._load_data(self.SAVEFILE)
 
@@ -52,23 +47,29 @@ class BilibiliDrawcardCrawler:
             sys.excepthook(*sys.exc_info())
         return out
 
-    def fetch_once(self):
+    async def fetch_once(self):
         try:
-            lastitems = self._data[-10000:] if self._data else None
-            new_data = self._spider(lastitems)
-            if len(new_data) > 100:
-                pass
-            _logger.info(f'get bilibili drawcard data {len(new_data)} items')
-            self._data.extend(new_data)
-            self._save_data(self.SAVEFILE, self._data)
-        except RollbackError as e:
-            _logger.warn(e)
-        except Exception as e:
+            self._gacha_dict = await self._fetch_json_from_bestdori()
+        except:
             import sys
             sys.excepthook(*sys.exc_info())
+        try:
+            lastitems = self._data[-10000:] if self._data else None
+            new_data = await self._spider(lastitems)
+            if len(new_data) > 100:
+                pass
+            self._data.extend(new_data)
+            self._save_data(self.SAVEFILE, self._data)
+            return len(new_data)
+        except RollbackError as e:
+            globals.logger.warning(e)
+        except:
+            import sys
+            sys.excepthook(*sys.exc_info())
+        return 0
 
-    def _spider(self, lastitems=None):
-        rawdata = self._request_page(1, 10000)
+    async def _spider(self, lastitems=None):
+        rawdata = await self._request_page(1, 10000)
         items = self._stripe_data(rawdata)
         if len(items) == 0:
             raise ValueError('Empty data')
@@ -83,18 +84,19 @@ class BilibiliDrawcardCrawler:
         items.reverse()
         return items
 
-    def _request_page(self, page=1, limit=20):
+    async def _request_page(self, page=1, limit=20):
         params = {
             'page': page,
             'limit': limit,
             '_': int(time.time() * 1000)
         }
-        r = httpx.get('https://qcloud-sdkact-api.biligame.com/bangdream/h5/user/situation/all', params=params, timeout=20)
-        r.raise_for_status()
-        j = r.json()
-        if j['code'] != 0:
-            raise ValueError(j['code'], j.get('message'))
-        return j['data']
+        async with httpx.AsyncClient() as client:
+            r = await client.get('https://qcloud-sdkact-api.biligame.com/bangdream/h5/user/situation/all', params=params, timeout=20)
+            r.raise_for_status()
+            j = r.json()
+            if j['code'] != 0:
+                raise ValueError(j['code'], j.get('message'))
+            return j['data']
 
     def _stripe_data(self, data):
         data = data['data']
@@ -125,22 +127,27 @@ class BilibiliDrawcardCrawler:
             i['gacha'] = self.get_gacha_name(i['gacha'])
         return ret
 
-    @functools.lru_cache()
-    def _fetch_json_from_bestdori(self, url):
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        return r.json()
+    async def _fetch_json_from_bestdori(self, url):
+        async with httpx.AsyncClient() as client:
+            r = await client.get('https://bestdori.com/api/gacha/all.5.json', timeout=20)
+            r.raise_for_status()
+            return r.json()
 
     def get_gacha_name(self, gacha):
-        d = self._fetch_json_from_bestdori('https://bestdori.com/api/gacha/all.5.json')
-        namelist = d[str(gacha)]['gachaName']
-        return self._locale(namelist, 3)
+        gacha_info = self._gacha_dict.get(str(gacha), None)
+        if gacha_info is None:
+            return ''
+        namelist = gacha_info.get('gachaName', [])
+        return self._locale_chinese(namelist, 3)
 
     @staticmethod
-    def _locale(l, lang, default=''):
-        if lang < len(l) and l[lang]:
-            return l[lang]
-        for name in l:
+    def _locale_chinese(li, chinese_index, default=''):
+        if chinese_index < len(li) and li[chinese_index]:
+            return li[chinese_index]
+        for name in li:
             if name:
                 return name
         return default
+
+
+drawcard_crawler = BilibiliDrawcardCrawler()
