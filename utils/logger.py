@@ -1,6 +1,8 @@
 import sys
 import logging
 import traceback
+from typing import Callable, Dict
+from typing_extensions import Literal
 from .color import Color, colored, colored_with_padding
 
 color_map = {
@@ -11,28 +13,77 @@ color_map = {
 }
 
 
+Style = Dict[
+    Literal[
+        'name',
+        'levelno',
+        'levelname',
+        'pathname',
+        'filename',
+        'module',
+        'lineno',
+        'funcName',
+        'created',
+        'asctime',
+        'msecs',
+        'relativeCreated',
+        'thread',
+        'threadName',
+        'process',
+        'message',
+    ],
+    Callable[[str, logging.LogRecord], str],
+]
+
+
 class StyledFormatter(logging.Formatter):
     def __init__(
         self,
-        fmt = '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
-        datefmt = '%Y-%m-%d %H:%M:%S',
-        style = None,
+        fmt: str = '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
+        datefmt: str = '%Y-%m-%d %H:%M:%S',
+        style: Style = None,
     ):
         super().__init__(fmt, datefmt=datefmt)
-        self.style = {
-            'asctime': lambda asctime: asctime,
-            'levelname': lambda levelname: levelname,
-            'name': lambda name: name,
+        self.fmt = fmt
+        self.style: Style = {
+            'name': lambda template, record: template,
+            'levelno': lambda template, record: template,
+            'levelname': lambda template, record: template,
+            'pathname': lambda template, record: template,
+            'filename': lambda template, record: template,
+            'module': lambda template, record: template,
+            'lineno': lambda template, record: template,
+            'funcName': lambda template, record: template,
+            'created': lambda template, record: template,
+            'asctime': lambda template, record: template,
+            'msecs': lambda template, record: template,
+            'relativeCreated': lambda template, record: template,
+            'thread': lambda template, record: template,
+            'threadName': lambda template, record: template,
+            'process': lambda template, record: template,
+            'message': lambda template, record: template,
             **(style or {}),
         }
 
     def format(self, record: logging.LogRecord) -> str:
         format_orig = self._style._fmt
 
-        self._style._fmt = f'%(asctime)s %(levelname)s %(name)s %(message)s' \
-            .replace('%(asctime)s', self.style['asctime']('%(asctime)s')) \
-            .replace('%(levelname)s', self.style['levelname']('%(levelname)s', record.levelno)) \
-            .replace('%(name)s', self.style['name']('%(name)s'))
+        self._style._fmt = self.fmt \
+            .replace('%(name)s', self.style['name']('%(name)s', record)) \
+            .replace('%(levelno)s', self.style['levelno']('%(levelno)s', record)) \
+            .replace('%(levelname)s', self.style['levelname']('%(levelname)s', record)) \
+            .replace('%(pathname)s', self.style['pathname']('%(pathname)s', record)) \
+            .replace('%(filename)s', self.style['filename']('%(filename)s', record)) \
+            .replace('%(lineno)d', self.style['lineno']('%(lineno)d', record)) \
+            .replace('%(funcName)s', self.style['funcName']('%(funcName)s', record)) \
+            .replace('%(created)f', self.style['created']('%(created)f', record)) \
+            .replace('%(asctime)s', self.style['asctime']('%(asctime)s', record)) \
+            .replace('%(msecs)d', self.style['msecs']('%(msecs)d', record)) \
+            .replace('%(relativeCreated)d', self.style['relativeCreated']('%(relativeCreated)d', record)) \
+            .replace('%(thread)d', self.style['thread']('%(thread)d', record)) \
+            .replace('%(threadName)d', self.style['threadName']('%(threadName)d', record)) \
+            .replace('%(process)d', self.style['process']('%(process)d', record)) \
+            .replace('%(message)s', self.style['message']('%(message)s', record))
 
         result = logging.Formatter.format(self, record)
 
@@ -69,6 +120,7 @@ class Logger:
 
     def __init__(self,
         name = __file__,
+        color = [Color.FG_BLACK, Color.BG_WHITE],
         level = default_level,
         filename = None,
         silent = False,
@@ -83,6 +135,8 @@ class Logger:
 
         silent: no output at terminal if `True`
         """
+        self.name = name
+        self.color = color
         self.fmt = fmt
         self.filefmt = filefmt
         self.datefmt = datefmt
@@ -110,9 +164,9 @@ class Logger:
                 fmt = self.fmt,
                 datefmt = self.datefmt,
                 style = {
-                    'asctime': lambda asctime: colored(asctime, Color.BRIGHT),
-                    'levelname': lambda levelname, level: colored_with_padding(levelname, *color_map[level]),
-                    'name': lambda name: colored_with_padding(name, Color.BG_BLUE),
+                    'asctime': lambda asctime, record: colored(asctime, Color.BRIGHT),
+                    'levelname': lambda levelname, record: colored_with_padding(levelname, *color_map[record.levelno]),
+                    'name': lambda name, record: colored_with_padding(name, self.color),
                 },
             ))
         if level_filter:

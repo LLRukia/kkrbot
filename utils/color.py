@@ -1,5 +1,5 @@
-from typing import Iterable, Optional, Union
-from typing_extensions import TypedDict
+from typing import Iterable, Optional, Union, Dict
+from typing_extensions import Literal
 
 
 def escape(*code: Iterable[Union[int, str]]):
@@ -59,7 +59,7 @@ class Color:
     BG_BRIGHT_CYAN = 106
     BG_BRIGHT_WHITE = 107
 
-ColorOptions = Union[int, Iterable[int], str, TypedDict('ColorOptions', {'foreground': Optional[int], 'background': Optional[int]})]
+ColorOptions = Union[int, Iterable[int], str, Dict[Literal['foreground', 'background'], Optional[int]]]
 
 
 def get_escaped_code(first_arg: ColorOptions, *codes: Iterable[int]):
@@ -69,7 +69,7 @@ def get_escaped_code(first_arg: ColorOptions, *codes: Iterable[int]):
 
     if isinstance(first_arg, Iterable): return escape(*first_arg)
 
-    foreground, background = first_arg['foreground'], first_arg['background']
+    foreground, background = first_arg.get('foreground'), first_arg.get('background')
     return f'{escape_foreground(foreground) if foreground else ""}{escape_background(background) if background else ""}'
 
 Message = Union[str, int]
