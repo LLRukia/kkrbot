@@ -1,7 +1,6 @@
 import os
 import asyncio
-from packages.aria2.options import Options
-from packages.aria2.ws_rpc import WSAria2RPC
+from packages.aria2 import Options, WSAria2RPC
 
 
 async def main():

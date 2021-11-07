@@ -3,7 +3,7 @@ from typing import Dict, Union
 from aiohttp import ClientSession
 from motor.motor_asyncio import AsyncIOMotorClient
 from packages.aria2.ws_rpc import WSAria2RPC
-from crawlers.Logger import Logger
+from utils.logger import Logger
 from .models import Card
 
 

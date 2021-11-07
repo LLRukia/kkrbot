@@ -1,7 +1,7 @@
 import os
 import argparse
 
-from Logger import Logger
+from utils.logger import Logger
 from bestdori import CardTable, CardCrawler, EventTable, EventCrawler, GachaTable, GachaCrawler, resource_map
 from bestdori.connection import event_gacha
 

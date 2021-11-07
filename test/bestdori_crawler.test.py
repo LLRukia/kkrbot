@@ -1,11 +1,16 @@
 import os
+import sys
+
+if sys.platform == 'win32':
+    os.system('cls')
+
 import asyncio
 import aiohttp
 from motor.motor_asyncio import AsyncIOMotorClient
 from packages.bestdori.crawler import Crawler
 from packages.aria2.options import Options
 from packages.aria2.ws_rpc import WSAria2RPC
-from crawlers.Logger import Logger
+from utils.logger import Logger
 
 
 async def main():
@@ -25,7 +30,7 @@ async def main():
             aria2rpc = aria2rpc,
             mongo = AsyncIOMotorClient(os.environ.get('MONGO_URI') or 'mongodb://localhost:27017'),
             asset_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'tmp')),
-            logger = Logger(),
+            logger = Logger('bestdori-crawler'),
         )
 
         await crawler.download_assets(1)

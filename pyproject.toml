@@ -16,6 +16,7 @@ pillow = "8.3.2"
 websockets = "10.0.0"
 pydantic = "1.8.2"
 aiohttp = "3.8.0"
+motor = "2.5.1"
 
 [[tool.poetry.source]]
 name = "tsinghua"
