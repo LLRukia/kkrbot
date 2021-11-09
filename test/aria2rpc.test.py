@@ -9,6 +9,7 @@ async def main():
         on_download_start = lambda gid: print('🚀 download_start', gid),
         on_download_complete = lambda gid: print('✅ download_complete', gid),
     ) as aria2rpc:
+        print(await aria2rpc.tellActive())
         hasDownloaded = False
         while True:
             if not hasDownloaded:
@@ -17,9 +18,9 @@ async def main():
                     ['https://www.baidu.com'],
                     Options(
                         dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'tmp')),
-                    ).dict(exclude_unset=True, exclude_none=True, by_alias=True),
+                    ),
                 )
-                assert res.get('result')
+                assert res.result
             await asyncio.sleep(1)
 
 try:

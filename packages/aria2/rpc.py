@@ -1,4 +1,4 @@
-from typing import TypeVar, Any, List
+from typing import TypeVar, Any, List, NewType
 from ..jsonrpc import JSONRPCRequestParams, JSONRPCSuccessResponse
 from .options import Options
 
@@ -17,10 +17,10 @@ def trimEndParams(params: List[Any]):
 
 
 class Aria2RPC:
-    def __init__(self, secret='', options=None):
+    def __init__(self, secret='', options: Options = None):
         self.id = 0
         self.secret = secret
-        self.options = options or {}
+        self.options = options or Options()
 
     async def request(self, payload: JSONRPCRequestParams) -> JSONRPCSuccessResponse[R]:
         raise NotImplementedError('please implement the request method')
@@ -36,7 +36,21 @@ class Aria2RPC:
             ]),
             'id': self.id,
         }
-        return await self.request(rpcReq)
+        return JSONRPCSuccessResponse(**await self.request(rpcReq))
 
     async def addUri(self, uris: List[str], options: Options = None, position: int = None) -> JSONRPCSuccessResponse[GID]:
-        return await self.call('aria2.addUri', uris, {**self.options, **(options or {})}, position)
+        return await self.call(
+            'aria2.addUri',
+            uris,
+            {
+                **self.options.dict(),
+                **(options or Options()).dict(),
+            },
+            position,
+        )
+
+    async def tellActive(self, offset: int = None, num: int = None):
+        return await self.call('aria2.tellActive', offset, num)
+
+    async def tellWaiting(self, offset: int = None, num: int = None):
+        return await self.call('aria2.tellWaiting', offset, num)

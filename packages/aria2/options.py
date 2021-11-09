@@ -12,7 +12,7 @@ class AllOptional(ModelMetaclass):
     def __new__(self, name, bases, namespaces, **kwargs):
         annotations = namespaces.get('__annotations__', {})
         for base in bases:
-            annotations = {**annotations, **base.__annotations__}
+            annotations = {**annotations, **(base.__annotations__ if hasattr(base, '__annotations__') else {})}
         for field in annotations:
             if not field.startswith('__'):
                 annotations[field] = Optional[annotations[field]]
@@ -24,7 +24,45 @@ class UnderscoreToDashConfig:
     alias_generator = lambda str: str.replace('_', '-')
 
 
-class _BasicOptions(BaseModel):
+class BaseOptionsModel(BaseModel):
+    def dict(self, **kwargs):
+        """
+        Change default kwargs for `dict` method
+        """
+        kwargs.setdefault('by_alias', True)
+        kwargs.setdefault('exclude_unset', True)
+        kwargs.setdefault('exclude_none', True)
+        return super().dict(**kwargs)
+
+    def json(self, **kwargs):
+        """
+        Change default kwargs for `json` method
+        """
+        kwargs.setdefault('by_alias', True)
+        kwargs.setdefault('exclude_unset', True)
+        kwargs.setdefault('exclude_none', True)
+        return super().json(**kwargs)
+
+
+class OptionsModelConfig(UnderscoreToDashConfig):
+    allow_population_by_field_name = True
+    """
+    Allow using `Options` like this:
+
+    ```
+    options = Options(https_proxy='http://localhost:1080')
+    ```
+
+    Otherwise, we can only use `Options` by alias like this:
+
+    ```
+    options = Options(**{
+        'https-proxy': 'http://localhost:1080',
+    })
+    ```
+    """
+
+class BasicOptions(BaseModel):
     """
     https://aria2.github.io/manual/en/html/aria2c.html#basic-options
     """
@@ -41,19 +79,22 @@ class _BasicOptions(BaseModel):
     check_integrity: bool
     "https://aria2.github.io/manual/en/html/aria2c.html#cmdoption-v"
 
-    # Note: for derived model (like `BasicOptions`),
-    # `continue_field: bool = Field(None, alias='continue')` will not override the alias_generator of `UnderscoreToDashConfig`.
-    # This is a known bug, see https://github.com/samuelcolvin/pydantic/issues/1177.
     continue_field: bool = Field(alias='continue')
-    "https://aria2.github.io/manual/en/html/aria2c.html#cmdoption-c"
+    """
+    https://aria2.github.io/manual/en/html/aria2c.html#cmdoption-c
 
+    Convention: if the option name is a reserved keyword, we add the `_field` suffix to the name as the field
 
-class BasicOptions(_BasicOptions, metaclass=AllOptional):
-    class Config(UnderscoreToDashConfig):
+    Note: for derived model (like `BasicOptions`),
+    `continue_field: bool = Field(None, alias='continue')` will not override the alias_generator of `UnderscoreToDashConfig`.
+    This is a known bug, see https://github.com/samuelcolvin/pydantic/issues/1177.
+    """
+
+    class Config(OptionsModelConfig):
         fields = {'continue_field': 'continue'}
 
 
-class _HttpFtpSftpOptions(BaseModel):
+class HttpFtpSftpOptions(BaseModel):
     """
     https://aria2.github.io/manual/en/html/aria2c.html#http-ftp-sftp-options
     """
@@ -137,12 +178,7 @@ class _HttpFtpSftpOptions(BaseModel):
     "https://aria2.github.io/manual/en/html/aria2c.html#cmdoption-uri-selector"
 
 
-class HttpFtpSftpOptions(_HttpFtpSftpOptions, metaclass=AllOptional):
-    class Config(UnderscoreToDashConfig):
-        pass
-
-
-class _HTTPSpecificOptions(BaseModel):
+class HTTPSpecificOptions(BaseModel):
     """
     https://aria2.github.io/manual/en/html/aria2c.html#http-specific-options
     """
@@ -215,24 +251,20 @@ class _HTTPSpecificOptions(BaseModel):
 
     user_agent: str
     "https://aria2.github.io/manual/en/html/aria2c.html#cmdoption-use-head"
+    
 
-
-class HTTPSpecficOptions(_HTTPSpecificOptions, metaclass=AllOptional):
-    class Config(UnderscoreToDashConfig):
-        pass
-
-
-class Options(HTTPSpecficOptions, HttpFtpSftpOptions, BasicOptions):
-    pass
+class Options(BaseOptionsModel, HTTPSpecificOptions, HttpFtpSftpOptions, BasicOptions, metaclass=AllOptional):
+    class Config(OptionsModelConfig):
+        allow_population_by_field_name = True
 
 
 if __name__ == '__main__':
-    options = Options(**{
-        'dir': '1',
-        'input-file': 'tt',
-        'continue-field': True,
-        'dry-run': False,
-        'stream-piece-selector': 'default',
-    })
+    options = Options(
+        dir= '1',
+        input_file = 'tt',
+        dry_run = False,
+        stream_piece_selector = 'default',
+        continue_field = 1,
+    )
 
-    print(options.json(exclude_unset=True, exclude_none=True, by_alias=True))
+    print(options.json())

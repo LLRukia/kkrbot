@@ -20,7 +20,10 @@ async def main():
                 uri = os.environ.get('ARIA2RPC_URI') or 'ws://localhost:6800/jsonrpc',
                 options = Options(
                     https_proxy = os.environ.get('https_proxy'),
-                ).dict(exclude_unset=True, exclude_none=True, by_alias=True),
+                    header = [
+                        'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
+                    ],
+                ),
                 on_download_start = lambda gid: print('🚀 download_start', gid),
                 on_download_complete = lambda gid: print('✅ download_complete', gid),
             ) as aria2rpc:
@@ -32,8 +35,12 @@ async def main():
             asset_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'tmp')),
             logger = Logger('bestdori-crawler'),
         )
-
-        await crawler.download_assets(1)
+        hasDownloaded = False
+        while True:
+            if not hasDownloaded:
+                hasDownloaded = True
+                await crawler.download_assets(20)
+            await asyncio.sleep(1)
 
 try:
     loop = asyncio.get_event_loop()

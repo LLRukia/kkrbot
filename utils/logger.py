@@ -39,8 +39,8 @@ Style = Dict[
 class StyledFormatter(logging.Formatter):
     def __init__(
         self,
-        fmt: str = '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
-        datefmt: str = '%Y-%m-%d %H:%M:%S',
+        fmt: str = None,
+        datefmt: str = None,
         style: Style = None,
     ):
         super().__init__(fmt, datefmt=datefmt)
@@ -110,13 +110,16 @@ def create_level_filter(level):
 
 class Logger:
     """
-    :name name of logger
-
-    :filename if specified, log will be written into the file
-
-    :silent no output at terminal if `True`
+    - `name` name of logger
+    - `color` style of the `name` part
+    - `level` the minimum level of the recorded log
+    - `filename` if specified, log will be written into the file
+    - `silent` no output at terminal if `True`
+    - `fmt` format of the stream handler, see https://docs.python.org/3/library/logging.html#logging.Formatter
+    - `filefmt` format of the file handler, see https://docs.python.org/3/library/logging.html#logging.Formatter
+    - `datefmt` date format, see https://docs.python.org/3/library/logging.html#logging.Formatter.formatTime
     """
-    default_level = 'DEBUG'
+    default_level = 'INFO'
 
     def __init__(self,
         name = __file__,
@@ -125,23 +128,16 @@ class Logger:
         filename = None,
         silent = False,
         fmt = '%(asctime)s %(name)s %(levelname)s %(message)s',
-        datefmt = '%Y-%m-%d %H:%M:%S',
         filefmt = '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
+        datefmt = '%Y-%m-%d %H:%M:%S',  
     ):
-        """
-        name: name of logger
-
-        filename: if specified, log will be written into the file
-
-        silent: no output at terminal if `True`
-        """
         self.name = name
         self.color = color
         self.fmt = fmt
         self.filefmt = filefmt
         self.datefmt = datefmt
         self.logger = logging.getLogger(name)
-        self.logger.setLevel('DEBUG')
+        self.logger.setLevel(level)
 
         if isinstance(filename, str):
             self.add_handler(filename, level=level)
@@ -169,16 +165,16 @@ class Logger:
                     'name': lambda name, record: colored_with_padding(name, self.color),
                 },
             ))
+
+        handler.setLevel(level)
         if level_filter:
             handler.addFilter(level_filter)
-        else:
-            handler.setLevel(level)
         self.logger.addHandler(handler)
 
     def error(self, message='', exc_info=None):
         """
-        message: error message
-        exc_info: tuple returned by sys.exc_info()
+        - `message` error message
+        - `exc_info` tuple returned by sys.exc_info()
         """
         if exc_info:
             exc_type, exc_value, exc_traceback = exc_info

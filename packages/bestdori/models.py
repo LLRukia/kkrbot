@@ -22,6 +22,10 @@ class CardStat(BaseModel):
         pass
 
 
+class CardStatWithLevelLimitInfo(CardStat):
+    level_limit: int
+
+
 class AllCardItem(BaseModel):
     character_id: int
     rarity: int
@@ -32,7 +36,7 @@ class AllCardItem(BaseModel):
     released_at: List[str]
     skill_id: int
     type: str
-    stat: Dict[Union[int, Literal['episodes']], Union[CardStat, List[CardStat]]]
+    stat: Dict[Union[int, Literal['episodes', 'training']], Union[CardStat, List[CardStat], CardStatWithLevelLimitInfo]]
 
     class Config(ToCamelConfig):
         pass
@@ -78,7 +82,7 @@ class Card(BaseModel):
     skill_id: int
     source: List[Dict]
     type: str
-    stat: Dict[Union[int, Literal['episodes']], Union[CardStat, List[CardStat]]]
+    stat: Dict[Union[int, Literal['episodes', 'training']], Union[CardStat, List[CardStat], CardStatWithLevelLimitInfo]]
 
     class Config(ToCamelConfig):
         pass
