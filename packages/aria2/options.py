@@ -1,27 +1,7 @@
 from typing import Optional, Union, List
 from typing_extensions import Literal
 from pydantic import BaseModel, Field
-from pydantic.main import ModelMetaclass
-
-
-class AllOptional(ModelMetaclass):
-    """
-    see https://stackoverflow.com/questions/67699451/make-every-fields-as-optional-with-pydantic#answer-67733889
-    """
-
-    def __new__(self, name, bases, namespaces, **kwargs):
-        annotations = namespaces.get('__annotations__', {})
-        for base in bases:
-            annotations = {**annotations, **(base.__annotations__ if hasattr(base, '__annotations__') else {})}
-        for field in annotations:
-            if not field.startswith('__'):
-                annotations[field] = Optional[annotations[field]]
-        namespaces['__annotations__'] = annotations
-        return super().__new__(self, name, bases, namespaces, **kwargs)
-
-
-class UnderscoreToDashConfig:
-    alias_generator = lambda str: str.replace('_', '-')
+from utils.pydantic_model_helpers import AllOptional, UnderscoreToDashConfig
 
 
 class BaseOptionsModel(BaseModel):

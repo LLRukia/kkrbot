@@ -1,16 +1,11 @@
 from typing import List, Dict, Union, TypeVar
 from typing_extensions import Literal
 from pydantic import BaseModel
+from utils.pydantic_model_helpers import UnderscoreToCamelConfig
 
 T = TypeVar('T')
 
 PossiblyNone = Union[T, None]
-
-lower_first_character = lambda str: str[0].lower() + str[1:]
-
-
-class ToCamelConfig:
-    alias_generator = lambda str: lower_first_character(''.join(word.capitalize() for word in str.split('_')))
 
 
 class CardStat(BaseModel):
@@ -18,7 +13,7 @@ class CardStat(BaseModel):
     technique: int
     visual: int
 
-    class Config(ToCamelConfig):
+    class Config(UnderscoreToCamelConfig):
         pass
 
 
@@ -38,7 +33,7 @@ class AllCardItem(BaseModel):
     type: str
     stat: Dict[Union[int, Literal['episodes', 'training']], Union[CardStat, List[CardStat], CardStatWithLevelLimitInfo]]
 
-    class Config(ToCamelConfig):
+    class Config(UnderscoreToCamelConfig):
         pass
 
 
@@ -50,7 +45,7 @@ class Card(BaseModel):
             quantity: int
             lb_bonus: int
             
-            class Config(ToCamelConfig):
+            class Config(UnderscoreToCamelConfig):
                 pass
 
         episode_id: int
@@ -63,7 +58,7 @@ class Card(BaseModel):
         release_level: int
         costs: Dict[Literal['entries'], List[CardEpisodeCost]]
         
-        class Config(ToCamelConfig):
+        class Config(UnderscoreToCamelConfig):
             pass
 
     id: int
@@ -84,5 +79,5 @@ class Card(BaseModel):
     type: str
     stat: Dict[Union[int, Literal['episodes', 'training']], Union[CardStat, List[CardStat], CardStatWithLevelLimitInfo]]
 
-    class Config(ToCamelConfig):
+    class Config(UnderscoreToCamelConfig):
         pass

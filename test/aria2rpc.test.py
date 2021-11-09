@@ -6,21 +6,23 @@ from packages.aria2 import Options, WSAria2RPC
 async def main():
     async with WSAria2RPC(
         uri = os.environ.get('ARIA2RPC_URI') or 'ws://localhost:6800/jsonrpc',
+        secret = os.environ.get('ARIA2RPC_SECRET') or '',
         on_download_start = lambda gid: print('🚀 download_start', gid),
         on_download_complete = lambda gid: print('✅ download_complete', gid),
     ) as aria2rpc:
-        print(await aria2rpc.tellActive())
         hasDownloaded = False
         while True:
             if not hasDownloaded:
                 hasDownloaded = True
-                res = await aria2rpc.addUri(
+                gid = await aria2rpc.add_uri(
                     ['https://www.baidu.com'],
                     Options(
                         dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'tmp')),
                     ),
                 )
-                assert res.result
+                files = await aria2rpc.get_files(gid=gid)
+                actives = await aria2rpc.tell_active()
+                print(gid, files, actives)
             await asyncio.sleep(1)
 
 try:

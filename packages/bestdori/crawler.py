@@ -48,7 +48,7 @@ class Crawler:
             self.logger.info(f'{url} already exists')
             return
         
-        await self.aria2rpc.addUri([url], Options(
+        await self.aria2rpc.add_uri([url], Options(
             out = filename,
             dir = os.path.abspath(os.path.join(self.asset_dir, subdir)),
         ))
