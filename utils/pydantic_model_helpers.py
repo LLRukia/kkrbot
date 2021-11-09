@@ -23,5 +23,6 @@ class AllOptional(ModelMetaclass):
 class UnderscoreToDashConfig:
     alias_generator = lambda str: str.replace('_', '-')
 
+
 class UnderscoreToCamelConfig:
     alias_generator = lambda str: lower_first_character(''.join(word.capitalize() for word in str.split('_')))

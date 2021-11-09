@@ -22,7 +22,8 @@ async def main():
                 )
                 files = await aria2rpc.get_files(gid=gid)
                 actives = await aria2rpc.tell_active()
-                print(gid, files, actives)
+                version = await aria2rpc.get_version()
+                print(gid, files, actives, version)
             await asyncio.sleep(1)
 
 try:

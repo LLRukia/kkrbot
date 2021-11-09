@@ -97,17 +97,17 @@ class Stat(BaseModel):
 
 class Version(BaseModel):
     version: str
-    enabledFeatures: List[str]
+    enabled_features: List[str]
 
     class Config(UnderscoreToCamelConfig):
         pass
 
 
 def trim_end_params(params: List[Any]):
-    lastParamIndex = len(params) - 1
-    while params[lastParamIndex] is None:
-        lastParamIndex -= 1
-    return params[0: lastParamIndex + 1]
+    last_param_index = len(params) - 1
+    while params[last_param_index] is None:
+        last_param_index -= 1
+    return params[0: last_param_index + 1]
 
 
 class Aria2RPC:

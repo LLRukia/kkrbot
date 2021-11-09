@@ -1,4 +1,3 @@
-from typing import Callable
 from inspect import signature, iscoroutinefunction
 from .protocol import JSONRPCSuccessResponse
 
