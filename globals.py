@@ -10,3 +10,5 @@ asset_event_path = ''
 asset_gacha_path = ''
 asset_resource_path = ''
 kkr_id = None
+admin_nickname = ''
+user_profile = None

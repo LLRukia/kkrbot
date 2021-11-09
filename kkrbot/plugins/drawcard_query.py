@@ -9,7 +9,7 @@ from nonebot.matcher import Matcher
 from nonebot.typing import T_State
 from utils import ImageProcesser
 from utils.Asset import ImageAsset
-from utils.BestdoriAssets import card, event, gacha
+from utils import BestdoriAssets
 
 scheduler = require('nonebot_plugin_apscheduler').scheduler
 
@@ -20,7 +20,7 @@ async def fetch_drawcard_data_hourly():
     l = await drawcard_crawler.fetch_once()
     globals.logger.info(f'fetch_drawcard_data_hourly successfully get {l}')
 
-drawcard_query = on_startswith('查抽卡名字', block=True, priority=2)
+drawcard_query = on_startswith('查抽卡名字', block=True, priority=3)
 
 
 @drawcard_query.handle()
@@ -37,7 +37,7 @@ async def handle_drawcard_query(bot: Bot, event: Event, state: T_State, matcher:
         ret = drawcard_crawler.get_data_by_username(user_name)
     if not ret:
         await matcher.send(Message.template("{}{}").format(
-            MessageSegment.image(ImageAsset.image_path('kkr/haha_hanpi.jpg')),
+            MessageSegment.image(ImageAsset.static_image('kkr/haha_hanpi.jpg')),
             '没出货查什么查'
         ))
 
@@ -50,7 +50,7 @@ async def handle_drawcard_query(bot: Bot, event: Event, state: T_State, matcher:
         too_large = True
     for (i, d) in enumerate(ret):
         card_id = d.situation_id
-        r = card.card_table.select_by_single_value('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', id=card_id)[0]
+        r = BestdoriAssets.card.card_table.select_by_single_value('id', 'resourceSetName', 'rarity', 'attribute', 'bandId', 'skillId', 'type', id=card_id)[0]
         if r:
             images.append(ImageProcesser.merge_image(r[1], r[2], r[3], r[4]) or
                           ImageProcesser.white_padding(180, 180))
@@ -78,24 +78,24 @@ async def handle_drawcard_query(bot: Bot, event: Event, state: T_State, matcher:
 
     if too_large:
         await matcher.send(Message.template("{}{}").format(
-            MessageSegment.image(ImageAsset.image_path('kkr/nb.jpg')),
+            MessageSegment.image(ImageAsset.static_image('kkr/nb.jpg')),
             '出货的也太多了，kkr好累！下次再查吧！'
         ))
 
 
-drawcard_update = on_regex(r'^更新抽卡数据$', block=True, priority=2)
+drawcard_update = on_regex(r'^更新抽卡数据$', block=True, priority=3)
 
 
 @drawcard_update.handle()
-async def handle_drawcard_query(bot: Bot, event: Event, state: T_State, matcher: Matcher):
+async def handle_drawcard_update(bot: Bot, event: Event, state: T_State, matcher: Matcher):
     from crawlers.BilibiliDrawcardCrawler import drawcard_crawler
     l = await drawcard_crawler.fetch_once()
     if l != 0:
         await matcher.send(Message.template("{}{}").format(
-            MessageSegment.image(ImageAsset.image_path('kkr/nb.jpg')),
+            MessageSegment.image(ImageAsset.static_image('kkr/nb.jpg')),
             f'又有新的{l}个出货记录了！'
         ))
     else:
         await matcher.send(Message.template("{}").format(
-            '更新失败，快看看怎么啦 QAQ'
+            f'更新失败，{globals.admin_nickname}快看看怎么啦 QAQ'
         ))

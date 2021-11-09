@@ -15,7 +15,7 @@ BACK_PIC_NUM_EACH_LINE = 5
 def bg_image_gen(back_number, s):
     def half_en_len(s):
         return (len(s) + (len(s.encode(encoding='utf-8')) - len(s)) // 2) // 2
-    back_number = 'back_%d' % back_number
+    back_number = f'back_{back_number}'
     img_path = os.path.join(globals.staticpath, f'bg/{back_number}.jpg')
     im_src = Image.open(img_path)
     if back_number in [f'back_{n}' for n in [38, 46, 47, 51, 52, 53]]:
@@ -69,7 +69,7 @@ def bg_image_gen(back_number, s):
         x = (text_width - sz[0]) / 2
         y = im_src.height
         draw.text((x, y), s, fill=(23, 0, 0), font=font)
-    return ImageAsset.image_raw(im)
+    return im
 
 
 def get_back_pics():
@@ -90,7 +90,7 @@ def get_back_pics():
 
     im = Image.new('RGB', (BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT * (((cur_back_pic_nums - 1) // BACK_PIC_NUM_EACH_LINE) + 1)), (255, 255, 255))
     for i, num in enumerate(back_pic_set):
-        im_o = bg_image_gen(num, '底图 %d' % num, get_im_obj=True)
+        im_o = bg_image_gen(num, f'底图 {num}')
         im_o = im_o.resize((BACK_PIC_UNIT_WIDTH, BACK_PIC_UNIT_HEIGHT))
         box = (i % BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_WIDTH, i // BACK_PIC_NUM_EACH_LINE * BACK_PIC_UNIT_HEIGHT)
         im.paste(im_o, box)
@@ -102,8 +102,8 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, 
     if thumbnail:
         try:
             if return_fn:
-                fn = f'auto_reply/cards/thumb/m_{rsn}_{"normal" if not trained else "after_training"}.png'
-                if os.access(os.path.join(globals.datapath, 'image', fn), os.R_OK):
+                fn = os.path.join(globals.datapath, 'image', f'auto_reply/cards/thumb/m_{rsn}_{"normal" if not trained else "after_training"}.png')
+                if os.access(fn, os.R_OK):
                     return fn
             attribute_icon = Image.open(os.path.join(globals.asset_resource_path, f'{attribute}.png'))
             band_icon = Image.open(os.path.join(globals.asset_resource_path, f'band_{band_id}.png'))
@@ -124,16 +124,18 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, 
             for i in range(rarity):
                 back_image.paste(star, (2, 170 - 27 * (i + 1)), mask=star)
             if return_fn:
-                fn = f'auto_reply/cards/thumb/m_{rsn}_{"normal" if not trained else "after_training"}.png'
-                back_image.save(os.path.join(globals.datapath, 'image', fn))
+                fn = os.path.join(globals.datapath, 'image', f'auto_reply/cards/thumb/m_{rsn}_{"normal" if not trained else "after_training"}.png')
+                back_image.save(fn)
                 return fn
             return back_image
         except:
+            import sys
+            sys.excepthook(*sys.exc_info())
             return None
 
     else:
-        fn = f'auto_reply/cards/m_{rsn}_{"normal" if not trained else "after_training"}.png'
-        if os.access(os.path.join(globals.datapath, 'image', fn), os.R_OK):
+        fn = os.path.join(globals.datapath, 'image', f'auto_reply/cards/m_{rsn}_{"normal" if not trained else "after_training"}.png')
+        if os.access(fn, os.R_OK):
             return fn
 
         try:
@@ -163,7 +165,7 @@ def merge_image(rsn, rarity, attribute, band_id, thumbnail=True, trained=False, 
             back_image.paste(attribute_icon, (OUT_WIDTH - RIGHT_OFFSET, TOP_OFFSET), mask=attribute_icon)
             for i in range(rarity):
                 back_image.paste(star, (LEFT_OFFSET, OUT_HEIGHT - BOTTOM_OFFSET - STAT_STEP * (i + 1)), mask=star)
-            back_image.save(os.path.join(globals.datapath, 'image', fn))
+            back_image.save(fn)
             return fn
         except:
             return ''
@@ -215,8 +217,7 @@ def thumbnail(**options):
     row_space = options.get('row_space', 0)
 
     if options.get('labels'):
-        font_type = f'cache/{options.get("label_style", {}).get("font_type", "simhei.ttf")}'
-        font = ImageFont.truetype(os.path.join(globals.workpath, font_type), options.get('label_style', {}).get('font_size', 20))
+        font = ImageFont.truetype(os.path.join(globals.staticpath, 'simhei.ttf'), options.get('label_style', {}).get('font_size', 20))
         all_chars = set()
         max_label_width = 0
         for label in options['labels']:
@@ -269,7 +270,7 @@ def thumbnail(**options):
 
 def open_nontransparent(filename):
     try:
-        image = Image.open(filename)
+        image = Image.open(filename).convert('RGBA')
         new_image = Image.new('RGBA', image.size, (255, 255, 255, 255))
         new_image.paste(image, (0, 0), image)
         return new_image
@@ -332,7 +333,7 @@ def compress(infile, mb=None, step=10, quality=80, isabs=False):
         im = Image.open(absinfile)
         im = im.convert('RGB')
         im.save(absoutfile, quality=quality)
-        return outfile
+        return absoutfile
 
     o_size = os.path.getsize(absinfile) / 1024
     if o_size <= mb:
@@ -346,4 +347,4 @@ def compress(infile, mb=None, step=10, quality=80, isabs=False):
             break
         quality -= step
         o_size = os.path.getsize(absoutfile) / 1024
-    return outfile
+    return absoutfile
