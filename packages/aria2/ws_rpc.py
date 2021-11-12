@@ -1,15 +1,16 @@
 import asyncio
 import json
-from typing import Callable, NoReturn, Dict
+from typing import Callable, NoReturn, Dict, Union
 from typing_extensions import Literal
 import functools
 import websockets
 from websockets.legacy.protocol import WebSocketCommonProtocol
 from .rpc import Aria2RPC, GID
 from .options import Options
+from ..jsonrpc import WebsocketJSONRPC
 
 
-Aria2RPCNotificationEvent = Literal[
+Aria2Event = Literal[
     'download_start',
     'download_pause',
     'download_stop',
@@ -27,99 +28,53 @@ Aria2RPCNotificationMessageMethod = Literal[
     'arai2.onBtDownloadComplete',
 ]
 
-Aria2RPCWebsocketMessageHandler = Callable[[GID], NoReturn]
+Aria2EventHandler = Callable[[GID], NoReturn]
 
-Aria2RPCWebsocketMessageHandlers = Dict[Aria2RPCNotificationEvent, Aria2RPCWebsocketMessageHandler]
+Aria2RPCWebsocketMessageHandlers = Dict[Aria2Event, Aria2EventHandler]
 
-message_method_to_event_name_map: Dict[Aria2RPCNotificationMessageMethod, Aria2RPCNotificationEvent] = {
-    'aria2.onDownloadStart': 'download_start',
-    'aria2.onDownloadPause': 'download_pause',
-    'aria2.onDownloadStop': 'download_stop',
-    'aria2.onDownloadComplete': 'download_complete',
-    'aria2.onDownloadError': 'download_error',
-    'arai2.onBtDownloadComplete': 'bt_download_complete',
+event_to_method_map: Dict[Aria2Event, Aria2RPCNotificationMessageMethod] = {
+    'download_start': 'aria2.onDownloadStart',
+    'download_pause': 'aria2.onDownloadPause',
+    'download_stop': 'aria2.onDownloadStop',
+    'download_complete': 'aria2.onDownloadComplete',
+    'download_error': 'aria2.onDownloadError',
+    'bt_download_complete': 'arai2.onBtDownloadComplete',
 }
 
 
-async def on_message(websocket: WebSocketCommonProtocol, message_queue: asyncio.Queue, handlers: Aria2RPCWebsocketMessageHandlers):
-    try:
-        while True:
-            message = json.loads(await websocket.recv())
-
-            # If `id` is not `None`, the message should be the reponse of a request.
-            if message.get('id') is not None:
-                await message_queue.put(message)
-
-            # Otherwise the message should be a notification
-            else:
-                event = message_method_to_event_name_map.get(message.get('method'))
-                if event:
-                    for handler in handlers[event]:
-                        handler(message['params'][0]['gid'])
-
-    except asyncio.CancelledError:
-        pass
+def wrap_aria2_event_handler(handler: Aria2EventHandler):
+    def notification_handler(notification: Dict):
+        return handler(notification['params'][0]['gid'])
+    
+    return notification_handler
 
 
-class WSAria2RPC(Aria2RPC):
+class WSAria2RPC(WebsocketJSONRPC, Aria2RPC):
     def __init__(
         self,
         uri: str,
         secret = '',
         options: Options = None,
-        on_download_start: Aria2RPCWebsocketMessageHandler = None,
-        on_download_complete: Aria2RPCWebsocketMessageHandler = None,
-        on_download_pause: Aria2RPCWebsocketMessageHandler = None,
-        on_download_stop: Aria2RPCWebsocketMessageHandler = None,
-        on_download_error: Aria2RPCWebsocketMessageHandler = None,
-        on_bt_download_complete: Aria2RPCWebsocketMessageHandler = None,
+        initial_id: Union[str, int] = None,
+        id_generator: Callable[[Union[str, int], Dict], Union[str, int]] = None,
+        on_download_start: Aria2EventHandler = None,
+        on_download_complete: Aria2EventHandler = None,
+        on_download_pause: Aria2EventHandler = None,
+        on_download_stop: Aria2EventHandler = None,
+        on_download_error: Aria2EventHandler = None,
+        on_bt_download_complete: Aria2EventHandler = None,
     ):
-        super().__init__(secret=secret, options=options)
-        self.uri = uri
-        self.websocket: WebSocketCommonProtocol = None
-        self._on_message_task: asyncio.Task = None
-        self._message_queue = asyncio.Queue()
+        WebsocketJSONRPC.__init__(self, uri=uri)
+        Aria2RPC.__init__(self, secret=secret, options=options, initial_id=initial_id, id_generator=id_generator)
         self._handlers = {
-            'download_start': [on_download_start] if on_download_start else [],
-            'download_complete': [on_download_complete] if on_download_complete else [],
-            'download_pause': [on_download_pause] if on_download_pause else [],
-            'download_stop': [on_download_stop] if on_download_stop else [],
-            'download_error': [on_download_error] if on_download_error else [],
-            'bt_download_complete': [on_bt_download_complete] if on_bt_download_complete else [],
+            'aria2.onDownloadStart': [on_download_start] if on_download_start else [],
+            'aria2.onDownloadPause': [on_download_pause] if on_download_pause else [],
+            'aria2.onDownloadStop': [on_download_stop] if on_download_stop else [],
+            'aria2.onDownloadComplete': [on_download_complete] if on_download_complete else [],
+            'aria2.onDownloadError': [on_download_error] if on_download_error else [],
+            'aria2.onBtDownloadComplete': [on_bt_download_complete] if on_bt_download_complete else [],
         }
-        self._id = 0
         
-    def add_handler(self, event: Aria2RPCNotificationEvent, handler: Aria2RPCWebsocketMessageHandler):
-        self._handlers[event].append(handler)
+    def add_event_listener(self, event: Aria2Event, handler: Aria2EventHandler):
+        WebsocketJSONRPC.add_notification_handler(event_to_method_map[event], wrap_aria2_event_handler(handler))
 
-    async def request(self, payload):
-        self._id += 1
-
-        # Intercept the request and set the jsonrpc `id`
-        payload['id'] = self._id
-
-        # Send request
-        await self.websocket.send(json.dumps(payload))
-        
-        while True:
-            message = await self._message_queue.get()
-            
-            # Check if `id` matches
-            if message['id'] == payload['id']:
-                return message
-            
-            # If `id` does not match, the message should be the response of some other request 
-            self._message_queue.put(message)
-
-    async def __aenter__(self):
-        self.websocket = await websockets.connect(
-            self.uri,
-            ping_interval = None,
-            close_timeout = 10,
-        )
-        self._on_message_task = asyncio.create_task(on_message(self.websocket, self._message_queue, self._handlers))
-        return self
-
-    async def __aexit__(self, exe_type, exc, tb):
-        if self._on_message_task: self._on_message_task.cancel()
-        asyncio.create_task(self.websocket.close()).add_done_callback(functools.partial(print, 'websocket closed'))

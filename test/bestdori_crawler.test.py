@@ -39,7 +39,8 @@ async def main():
         while True:
             if not hasDownloaded:
                 hasDownloaded = True
-                await crawler.download_assets(20)
+                # await crawler.download_assets(20)
+                print(await crawler.fetch_all_gachas_metadata())
             await asyncio.sleep(1)
 
 try:

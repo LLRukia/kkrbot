@@ -65,7 +65,7 @@ class BasicOptions(BaseModel):
 
     Convention: if the option name is a reserved keyword, we add the `_field` suffix to the name as the field
 
-    Note: for derived model (like `BasicOptions`),
+    Note: for derived model (like `Options`),
     `continue_field: bool = Field(None, alias='continue')` will not override the alias_generator of `UnderscoreToDashConfig`.
     This is a known bug, see https://github.com/samuelcolvin/pydantic/issues/1177.
     """

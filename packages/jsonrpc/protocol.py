@@ -30,11 +30,7 @@ class JSONRPCErrorResponse(GenericModel, JSONRPCBaseData, Generic[R]):
     error: JSONRPCError[R]
 
 
-JSONRPCResponse = TypeVar('JSONRPCResponse', JSONRPCSuccessResponse, JSONRPCErrorResponse)
-
-
-class JSONRPCResponse(GenericModel, Generic[R, E]):
-    __root__: Union[JSONRPCSuccessResponse[R], JSONRPCErrorResponse[E]]
+JSONRPCResponse = Union[JSONRPCSuccessResponse, JSONRPCErrorResponse]
 
 
 class JSONRPCNotification(GenericModel, Generic[JSONRPCRequestParams]):

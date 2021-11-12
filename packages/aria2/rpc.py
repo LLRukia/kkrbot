@@ -1,8 +1,8 @@
-from typing import Dict, TypeVar, Any, List
+from typing import Callable, Dict, TypeVar, Any, List, Union
 from typing_extensions import Literal
 from pydantic import BaseModel
 from utils.pydantic_model_helpers import UnderscoreToCamelConfig, AllOptional
-from ..jsonrpc import unwrap_success_response_message
+from ..jsonrpc import unwrap_success_response_message, JSONRPCResponse
 from .options import Options
 
 T = TypeVar('T')
@@ -110,27 +110,39 @@ def trim_end_params(params: List[Any]):
     return params[0: last_param_index + 1]
 
 
+auto_increment_generator = lambda prev_id, message: prev_id + 1
+
+
 class Aria2RPC:
-    def __init__(self, secret='', options: Options = None):
-        self.id = 0
+    def __init__(
+        self,
+        secret = '',
+        options: Options = None,
+        initial_id: Union[str, int] = None,
+        id_generator: Callable[[Union[str, int], Dict], Union[str, int]] = None,
+    ) -> None:
         self.secret = secret
         self.options = options or Options()
+        self._id = initial_id or 0
+        self._id_generator = id_generator or auto_increment_generator
 
     async def request(self, *args, **kwargs):
         raise NotImplementedError('please implement the request method')
 
     async def call(self, method: str, *params):
-        self.id += 1
-        rpcReq = {
+        response = await self.request({
             'jsonrpc': '2.0',
             'method': method,
             'params': trim_end_params([
                 f'token:$${self.secret}$$',
                 *params,
             ]),
-            'id': self.id,
-        }
-        return await self.request(rpcReq)
+            'id': self._id,
+        })
+
+        self._id = self._id_generator(self._id, response)
+
+        return response
 
     @unwrap_success_response_message
     async def add_uri(self, uris: List[str], options: Options = None, position: int = None) -> GID:
