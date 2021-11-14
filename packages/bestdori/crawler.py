@@ -6,8 +6,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from packages.aria2.options import Options
 from packages.aria2.ws_rpc import WSAria2RPC
 from utils.logger import Logger
-from .models import Card, PartialCard, PartialCharacter, PartialEvent, PartialGacha, PartialBand, PartialSkill
-from .helpers import get_asset_urls_from_metadata
+from .models.card import Card
+from .models import *
+from .helpers import get_card_asset_urls_from_metadata
+
+servers = ['jp', 'en', 'tw', 'cn', 'kr']
 
 
 class Crawler:
@@ -85,23 +88,57 @@ class Crawler:
         )
         return {id: PartialGacha(**all_gacha_item) for id, all_gacha_item in all_gachas_metadata.items()}
 
-    async def fetch_metadata(self, id: int, save_to_mongo=True) -> Card:
+    async def fetch_card_metadata(self, id: int, save_to_mongo=True) -> Card:
         res = await self.session.get(f'https://bestdori.com/api/cards/{id}.json')
         metadata = {'id': id, **(await res.json())}
-        if save_to_mongo: await self.mongo.bestdori.card.insert_one(metadata)
+        if save_to_mongo:
+            await self.mongo.bestdori.card.update_one(
+                {'id': id},
+                {'$set': metadata},
+                upsert=True,
+            )
         return Card(**metadata)
 
-    async def load_metadata(self, id: int) -> Card:
+    async def load_card_metadata(self, id: int) -> Card:
         metadata = await self.mongo.bestdori.card.find_one({'id': id})
         if not metadata:
-            return await self.fetch_metadata(id)
+            return await self.fetch_card_metadata(id)
         return Card(**metadata)
+
+    async def fetch_event_metadata(self, id: int) -> Event:
+        res = await self.session.get(f'https://bestdori.com/api/events/{id}.json')
+        metadata = {'id': id, **(await res.json())}
+        await self.mongo.bestdori.event.update_one(
+            {'id': id},
+            {'$set': metadata},
+            upsert=True,
+        )
+        return Event(**metadata)
+
+    async def load_event_metadata(self, id: int) -> Event:
+        metadata = await self.mongo.bestdori.event.find_one({'id': id})
+        if not metadata:
+            return await self.fetch_event_metadata(id)
+        return Event(**metadata)
+
+    async def fetch_gacha_medadata(self, id: int) -> Gacha:
+        res = await self.session.get(f'https://bestdori.com/api/gacha/{id}.json')
+        metadata = {'id': id, **(await res.json())}
+        await self.mongo.bestdori.gacha.update_one(
+            {'id': id},
+            {'$set': metadata},
+            upsert=True,
+        )
+        return Gacha(**metadata)
 
     async def download_asset(self, url: str, filename: str, overwrite=False, subdir=''):
         if os.path.isfile(os.path.join(self.asset_dir, subdir, filename)) and not overwrite:
             self.logger.info(f'{url} already exists')
             return
         
+        if not os.path.exists(os.path.join(self.asset_dir, subdir)):
+            os.makedirs(os.path.join(self.asset_dir, subdir))
+    
         await self.aria2rpc.add_uri([url], Options(
             out = filename,
             dir = os.path.abspath(os.path.join(self.asset_dir, subdir)),
@@ -109,12 +146,12 @@ class Crawler:
 
         return filename
  
-    async def download_assets(self, id_or_metadata: Union[int, Card], overwrite=False):
+    async def download_card_assets(self, id_or_metadata: Union[int, Card], overwrite=False):
         metadata = await self.load_metadata(id_or_metadata) if isinstance(id_or_metadata, int) else id_or_metadata
 
         resource_set_name = metadata.resource_set_name
 
-        urls = get_asset_urls_from_metadata(metadata)
+        urls = get_card_asset_urls_from_metadata(metadata)
 
         await asyncio.gather(*[
             self.download_asset(urls['card_normal'], f'{resource_set_name}_card_normal.png', overwrite),
@@ -126,4 +163,41 @@ class Crawler:
                 self.download_asset(urls['card_after_training'], f'{resource_set_name}_card_after_training.png', overwrite),
                 self.download_asset(urls['icon_after_training'], f'{resource_set_name}_after_training.png', overwrite, 'thumb'),
             ])
-        
+
+    async def download_event_asset(self, id_or_metadata: Union[int, Event], overwrite=False):
+        metadata = await self.load_event_metadata(id_or_metadata) if isinstance(id_or_metadata, int) else id_or_metadata
+
+        banner_asset_bundle_name, asset_bundle_name = metadata.banner_asset_bundle_name, metadata.asset_bundle_name
+
+        # TODO: 国服活动的 banner url 有点问题
+        # await asyncio.gather(*[
+        #     self.download_asset(
+        #         f'https://bestdori.com/assets/{server}/homebanner_rip/{banner_asset_bundle_name}.png',
+        #         f'{banner_asset_bundle_name}.png',
+        #         overwrite,
+        #         server,
+        #     ) for i, server in enumerate(servers) if metadata.start_at[i]
+        # ])
+
+        # await asyncio.gather(*[
+        #     self.download_asset(
+        #         f'https://bestdori.com/assets/{server}/event/{asset_bundle_name}/images_rip/banner.png',
+        #         'banner.png',
+        #         overwrite,
+        #         server,
+        #     ) for i, server in enumerate(servers) if metadata.start_at[i]
+        # ])
+
+        await self.download_asset(
+            f'https://bestdori.com/assets/jp/event/{asset_bundle_name}/topscreen_rip/trim_eventtop.png',
+            'trim_eventtop.png',
+            overwrite,
+            asset_bundle_name,
+        )
+
+        await self.download_asset(
+            f'https://bestdori.com/assets/jp/event/{asset_bundle_name}/topscreen_rip/bg_eventtop.png',
+            'bg_eventtop.png',
+            overwrite,
+            asset_bundle_name,
+        )

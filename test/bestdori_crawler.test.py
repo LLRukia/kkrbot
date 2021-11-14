@@ -7,9 +7,8 @@ if sys.platform == 'win32':
 import asyncio
 import aiohttp
 from motor.motor_asyncio import AsyncIOMotorClient
-from packages.bestdori.crawler import Crawler
-from packages.aria2.options import Options
-from packages.aria2.ws_rpc import WSAria2RPC
+from packages.bestdori import Crawler
+from packages.aria2 import Options, WSAria2RPC
 from utils.logger import Logger
 
 
@@ -39,8 +38,9 @@ async def main():
         while True:
             if not hasDownloaded:
                 hasDownloaded = True
-                # await crawler.download_assets(20)
-                print(await crawler.fetch_all_gachas_metadata())
+                # await crawler.download_card_assets(502)
+                # print(await crawler.fetch_gacha_medadata(6))
+                await crawler.download_event_asset(1)
             await asyncio.sleep(1)
 
 try:

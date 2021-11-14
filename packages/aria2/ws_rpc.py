@@ -1,10 +1,5 @@
-import asyncio
-import json
 from typing import Callable, NoReturn, Dict, Union
 from typing_extensions import Literal
-import functools
-import websockets
-from websockets.legacy.protocol import WebSocketCommonProtocol
 from .rpc import Aria2RPC, GID
 from .options import Options
 from ..jsonrpc import WebsocketJSONRPC
@@ -67,12 +62,12 @@ class WSAria2RPC(WebsocketJSONRPC, Aria2RPC):
         WebsocketJSONRPC.__init__(self, uri=uri)
         Aria2RPC.__init__(self, secret=secret, options=options, initial_id=initial_id, id_generator=id_generator)
         self._handlers = {
-            'aria2.onDownloadStart': [on_download_start] if on_download_start else [],
-            'aria2.onDownloadPause': [on_download_pause] if on_download_pause else [],
-            'aria2.onDownloadStop': [on_download_stop] if on_download_stop else [],
-            'aria2.onDownloadComplete': [on_download_complete] if on_download_complete else [],
-            'aria2.onDownloadError': [on_download_error] if on_download_error else [],
-            'aria2.onBtDownloadComplete': [on_bt_download_complete] if on_bt_download_complete else [],
+            'aria2.onDownloadStart': [wrap_aria2_event_handler(on_download_start)] if on_download_start else [],
+            'aria2.onDownloadPause': [wrap_aria2_event_handler(on_download_pause)] if on_download_pause else [],
+            'aria2.onDownloadStop': [wrap_aria2_event_handler(on_download_stop)] if on_download_stop else [],
+            'aria2.onDownloadComplete': [wrap_aria2_event_handler(on_download_complete)] if on_download_complete else [],
+            'aria2.onDownloadError': [wrap_aria2_event_handler(on_download_error)] if on_download_error else [],
+            'aria2.onBtDownloadComplete': [wrap_aria2_event_handler(on_bt_download_complete)] if on_bt_download_complete else [],
         }
         
     def add_event_listener(self, event: Aria2Event, handler: Aria2EventHandler):

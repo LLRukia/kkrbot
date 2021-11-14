@@ -1,7 +1,7 @@
 from .models import Card
 
 
-def get_asset_urls_from_metadata(metadata: Card):
+def get_card_asset_urls_from_metadata(metadata: Card):
     suffix = str(metadata.id // 50)
     group_id = '0' * (5 - len(suffix)) + suffix
 
