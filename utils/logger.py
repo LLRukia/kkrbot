@@ -171,17 +171,17 @@ class Logger:
             handler.addFilter(level_filter)
         self.logger.addHandler(handler)
 
-    def error(self, message='', exc_info=None):
+    def error(self, *message, exc_info=None):
         """
         - `message` error message
         - `exc_info` tuple returned by sys.exc_info()
         """
         if exc_info:
             exc_type, exc_value, exc_traceback = exc_info
-            additional = f'[{message}] ' if message else ''
+            additional = f'[{" ".join(message)}] ' if message else ''
             self.logger.error(additional + ' => '.join([f'"{brief_path(fs.filename)}", {fs.lineno}: "{fs.line}"' for fs in traceback.extract_tb(exc_traceback)]) + f' [{exc_type.__name__}: {exc_value}]')
         else:
-            self.logger.error(message)
+            self.logger.error(' '.join(message))
 
     def info(self, *message):
         self.logger.info(' '.join(message))
