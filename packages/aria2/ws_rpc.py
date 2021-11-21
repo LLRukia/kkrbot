@@ -71,5 +71,5 @@ class WSAria2RPC(WebsocketJSONRPC, Aria2RPC):
         }
         
     def add_event_listener(self, event: Aria2Event, handler: Aria2EventHandler):
-        WebsocketJSONRPC.add_notification_handler(event_to_method_map[event], wrap_aria2_event_handler(handler))
+        self.add_notification_handler(event_to_method_map[event], wrap_aria2_event_handler(handler))
 
