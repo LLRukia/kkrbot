@@ -146,3 +146,4 @@ data
 /test/tmp
 *.out
 static/kkr/Thumbs.db
+/scripts/assets/
