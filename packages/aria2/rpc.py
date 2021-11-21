@@ -1,3 +1,4 @@
+import asyncio
 from typing import Callable, Dict, TypeVar, Any, List, Union
 from typing_extensions import Literal
 from pydantic import BaseModel
@@ -111,6 +112,7 @@ def trim_end_params(params: List[Any]):
 
 
 auto_increment_generator = lambda prev_id, message: prev_id + 1
+lock = asyncio.Lock()
 
 
 class Aria2RPC:
@@ -130,19 +132,22 @@ class Aria2RPC:
         raise NotImplementedError('please implement the request method')
 
     async def call(self, method: str, *params):
-        response = await self.request({
-            'jsonrpc': '2.0',
-            'method': method,
-            'params': trim_end_params([
-                f'token:$${self.secret}$$',
-                *params,
-            ]),
-            'id': self._id,
-        })
+        await lock.acquire()
+        try:
+            response = await self.request({
+                'jsonrpc': '2.0',
+                'method': method,
+                'params': trim_end_params([
+                    f'token:$${self.secret}$$',
+                    *params,
+                ]),
+                'id': self._id,
+            })
 
-        self._id = self._id_generator(self._id, response)
-
-        return response
+            self._id = self._id_generator(self._id, response)
+            return response
+        finally:
+            lock.release()
 
     @unwrap_success_response_message
     async def add_uri(self, uris: List[str], options: Options = None, position: int = None) -> GID:
