@@ -19,8 +19,8 @@ class PartialCard(UnderscoreToCamelModel):
     attribute: str
     level_limit: int
     resource_set_name: str
-    prefix: List[str]
-    released_at: List[str]
+    prefix: ServerListType[str]
+    released_at: ServerListType[str]
     skill_id: int
     type: str
     stat: Dict[

@@ -7,7 +7,7 @@ if sys.platform == 'win32':
 import asyncio
 import aiohttp
 from motor.motor_asyncio import AsyncIOMotorClient
-from packages.bestdori import Crawler
+from packages.bestdori import Crawler, get_gacha_during_event
 from packages.aria2 import Options, WSAria2RPC
 from utils.logger import Logger
 
@@ -39,8 +39,15 @@ async def main():
             if not hasDownloaded:
                 hasDownloaded = True
                 # await crawler.download_card_assets(502)
-                # print(await crawler.fetch_gacha_medadata(6))
-                await crawler.download_event_asset(1)
+                # await crawler.download_gacha_assets(1)
+                # await crawler.download_event_assets(1)
+                events = await crawler.fetch_all_events_metadata()
+                gachas = await crawler.fetch_all_gachas_metadata()
+                event = events[1]
+                index = 0
+                print(event.event_name[index])
+                for gacha in get_gacha_during_event(event, gachas, 'jp').values():
+                    print(gacha.gacha_name[index])
             await asyncio.sleep(1)
 
 try:
