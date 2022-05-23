@@ -56,7 +56,24 @@ help = on_regex(r'^使用说明$', block=True, priority=1)
 
 @help.handle()
 async def handle_help(bot: Bot, event: Event, state: T_State, matcher: Matcher):
-    await matcher.send(Message.template("{}").format(MessageSegment.image(ImageProcesser.manual())))
+    await matcher.send(Message.template("{}").format(MessageSegment.image(ImageProcesser.str_to_pic([
+            'ycm/有车吗: 查询车牌(来源: https://bandoristation.com/)',
+            '底图目录: 查询底图目录(是的，不仅功能一样，连图都盗过来了，虽然还没更新。底图31，Tsugu！.jpg)',
+            '底图+数字: 切换底图',
+            'xx.jpg: 图片合成',
+            '',
+            '以下查询功能数据来源Bestdori',
+            '查卡 [稀有度] [颜色] [人物] [乐团] [技能类型]: 按条件筛选符合要求的卡片，同类条件取并集，不同类条件取交集。例如: 查卡 4x pure ksm 分',
+            '查卡+数字: 按id查询单卡信息',
+            '无框+数字: 按id查询单卡无框卡面',
+            '活动列表 [活动类型]: 按条件筛选符合要求的活动，活动类型包括“一般活动”，“竞演LIVE”或“对邦”，“挑战LIVE”或“CP”，“LIVE试炼”，“任务LIVE”',
+            '活动+数字 [服务器]: 按id查询单活动信息，默认国服，可选“日服”，“国际服”，“台服”，“国服”，“韩服”',
+            '卡池列表 [卡池类型]: 按条件筛选符合要求的卡池，卡池类型包括“常驻”或“无期限”，“限时”或“限定”或“期间限定”，“特殊”（该条件慎加，因为没啥特别的卡池），“必4”',
+            '卡池+数字 [服务器]: 按id查询单卡池信息，默认国服，可选“日服”，“国际服”，“台服”，“国服”，“韩服”',
+            '',
+            '以下查询功能数据来源bilibili开放的豹跳接口，慎用',
+            '查抽卡名字 名字: 查用户名称包含该名字的玩家出的4星',
+        ], 'manual'))))
 
 bg_query = on_regex(r'^底图目录$', block=True, priority=2)
 
